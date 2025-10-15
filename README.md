@@ -14,6 +14,22 @@ All long-form datasets are provided as a [HuggingFace collection](https://huggin
 - Prompts used to elicit long-form generations:
   - [LongFact++ prompts](https://huggingface.co/datasets/obalcells/longfact-augmented-prompts)
 
+## Pretrained Probes
+
+Pretrained hallucination detection probes for various LLMs are available at: [obalcells/hallucination-probes](https://huggingface.co/obalcells/hallucination-probes)
+
+We provide three types of probes:
+- **Linear probes** (`*_linear`): Simple linear classifiers trained on model hidden states
+- **LoRA probes with KL regularization** (`*_lora_lambda_kl_0_05`): LoRA adapters with KL divergence regularization (λ=0.05) for minimal impact on generation quality
+- **LoRA probes with LM regularization** (`*_lora_lambda_lm_0_01`): LoRA adapters with cross-entropy loss regularization (λ=0.01)
+
+Supported models include:
+- Llama 3.3 70B
+- Llama 3.1 8B
+- Gemma 2 9B
+- Mistral Small 24B
+- Qwen 2.5 7B
+
 ## Code
 
 ### Setup
@@ -97,6 +113,20 @@ The demo provides a real-time visualization of hallucination detection during te
    ```bash
     HF_TOKEN=your_huggingface_token_id
    ```
+
+3. **Select a probe**: The Modal backend requires you to specify which probe to load. Available probe names include:
+
+   For Llama 3.1 8B:
+   - `llama3_1_8b_lora_lambda_kl_0_05` - LoRA probe with high KL regularization (recommended)
+   - `llama3_1_8b_linear` - Linear probe
+   - `llama3_1_8b_lora_lambda_lm_0_01` - LoRA probe with LM regularization
+
+   For Llama 3.3 70B:
+   - `llama3_3_70b_lora_lambda_kl_0_05` - LoRA probe with high KL regularization (recommended)
+   - `llama3_3_70b_linear` - Linear probe
+   - `llama3_3_70b_lora_lambda_lm_0_01` - LoRA probe with LM regularization
+
+   **Recommendation**: Use the `*_lora_lambda_kl_0_05` probes for the best results and smallest impact on generation quality.
 
 #### Running the Demo
 

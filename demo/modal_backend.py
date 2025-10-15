@@ -190,7 +190,7 @@ class ProbeInferenceService:
 
             download_probe_from_hf(
                 repo_id=repo_id,
-                repo_subfolder=f"value_head_probes/{probe_id}",
+                repo_subfolder=probe_id,
                 local_folder=probe_dir,
                 token=os.environ.get("HF_TOKEN")
             )

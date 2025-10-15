@@ -17,7 +17,7 @@ def download_probe_from_hf(
     repo_id: str,
     probe_id: Optional[str] = None,
     local_folder: Optional[Union[str, Path]] = None,
-    hf_repo_subfolder_prefix: str = "value_head_probes",
+    hf_repo_subfolder_prefix: str = "",
     token: Optional[str] = None
 ) -> None:
     """Simplified probe download function for Modal."""
@@ -38,7 +38,7 @@ def download_probe_from_hf(
     )
     
     # Filter files by subfolder
-    path_in_repo = f"{hf_repo_subfolder_prefix}/{probe_id}"
+    path_in_repo = os.path.join(hf_repo_subfolder_prefix, probe_id)
     subfolder_files = [f for f in repo_files if f.startswith(f"{path_in_repo}/")]
     
     # Download each file
@@ -67,7 +67,7 @@ def upload_probe_to_hf(
     repo_id: str,
     probe_id: Optional[str] = None,
     local_folder: Optional[Union[str, Path]] = None,
-    hf_repo_subfolder_prefix: str = "value_head_probes",
+    hf_repo_subfolder_prefix: str = "",
     token: Optional[str] = None,
     private: bool = False,
     commit_message: str = "Upload probe model"
@@ -97,7 +97,7 @@ def upload_probe_to_hf(
     if not local_folder.exists():
         raise ValueError(f"Probe directory {probe_dir} does not exist")
 
-    path_in_repo = f"{hf_repo_subfolder_prefix}/{probe_id}"
+    path_in_repo = os.path.join(hf_repo_subfolder_prefix, probe_id)
     
     # Login if token is provided
     if token:
