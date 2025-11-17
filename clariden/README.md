@@ -7,6 +7,4 @@ there are some config files related to the clariden cluster, e.g. [Dockerfile](.
 The base `.sqsh` image with main branch cloned is saved at `/capstor/scratch/cscs/tkwiecinski/hallucination-probes/base.sqsh`. It might not have the latest repo version though. 
 
 
-
-
-Notice, that there is no uv installed in the container (it seems that uv doesn't really like working with torch and global env).
+Notice, that there is no uv env installed in the container, there is just a global env, so don't run `uv sync`
