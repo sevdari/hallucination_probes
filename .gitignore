@@ -14,3 +14,5 @@ value_head_probes/
 
 *.egg-info/
 **/*.egg-info/
+
+log/*
