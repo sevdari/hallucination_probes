@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=large-sc-2
 #SBATCH -p normal
-#SBATCH --time=24:00:00
+#SBATCH --time=12:00:00
 #SBATCH --job-name=paper_reproduce
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
