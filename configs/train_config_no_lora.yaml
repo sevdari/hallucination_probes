@@ -1,12 +1,12 @@
 # Example training configuration for hallucination detection probe
 
 probe_config:
-  probe_id: "reproduce_paper_llama3_1_8b_lora"
+  probe_id: "reproduce_paper_llama3_1_8b_no_lora"
 
   model_name: "meta-llama/Meta-Llama-3.1-8B-Instruct"
   layer: 30  # Second to last layer for Llama 3.1 8B
 
-  lora_layers: "all"
+  lora_layers: "none"
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05
