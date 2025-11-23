@@ -5,6 +5,7 @@
 #SBATCH --job-name=paper_reproduce
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
+#SBATCH --array=0-3
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
