@@ -22,11 +22,15 @@ fi
 
 # change this to your repo path
 cd /workspace/hallucination_probes/
+
 git pull
+git checkout  reproduce_experiments
+git pull
+
 
 export CUDA_VISIBLE_DEVICES=0
 uv pip install --no-deps  . --system
 
-python probe/train.py --config=configs/train_config_apertus.yaml
+python probe/train.py --config=configs/train_config.yaml
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash
