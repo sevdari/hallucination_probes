@@ -1,7 +1,7 @@
 # Example training configuration for hallucination detection probe
 
 probe_config:
-  probe_id: "reproduce_paper_apertus_no_lora"
+  probe_id: "apertus_linear"
 
   model_name: "swiss-ai/Apertus-8B-Instruct-2509"
   layer: 30  # Second to last layer for Llama 3.1 8B
@@ -12,21 +12,21 @@ probe_config:
   lora_dropout: 0.05
 
   load_from: null
-  hf_repo_id: "obalcells/hallucination-probes"
+  hf_repo_id: "tymciurymciu/hallucination-probes"
 
   threshold: 0.5
 
 
 wandb_project: "hallucination-probes"
 
-upload_to_hf: false
+upload_to_hf: true
 save_evaluation_metrics: true
 save_roc_curves: false
 dump_raw_eval_results: false
 
 # Training hyperparameters
-per_device_train_batch_size: 4
-per_device_eval_batch_size: 4
+per_device_train_batch_size: 8 
+per_device_eval_batch_size: 8
 high_loss_threshold: null
 lambda_lm: 0.0
 lambda_kl: 0.5
