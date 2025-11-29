@@ -200,7 +200,7 @@ class ValueHeadProbe(nn.Module):
         probe_config = {
             "target_layer_name": self.target_module.__class__.__name__,
             "layer_idx": self.layer_idx,
-            "hidden_size": self.value_head.in_features
+            "hidden_size": self.value_head.in_features if isinstance(self.value_head, nn.Linear) else None,
         }
         with open(path / "probe_config.json", 'w') as f:
             json.dump(probe_config, f, indent=4)
