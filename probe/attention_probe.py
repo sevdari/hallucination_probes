@@ -90,7 +90,7 @@ class PerTokenAttentionProbe(nn.Module):
         attn_logits = self.query_proj(hidden)  # each token has its own query
 
         # ALiBi-like positional bias: [S, S, n_heads]
-        pos = torch.arange(S, device=hidden.device).unsqueeze(0) - torch.arange(S).unsqueeze(1)
+        pos = torch.arange(S, device=hidden.device).unsqueeze(0) - torch.arange(S, device=hidden.device).unsqueeze(1)
         pos = pos.clamp(min=0).unsqueeze(-1)  # causal mask style
         attn_logits = attn_logits.unsqueeze(2) + pos * self.position_weights[None, None, :]  # [B, S, S, n_heads]
 
