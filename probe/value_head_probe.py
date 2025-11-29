@@ -91,7 +91,8 @@ class ValueHeadProbe(nn.Module):
             )
             print(f"WARNING: Using seed=42 for the initialization of the probe")
             torch.manual_seed(42)
-            self._initialize_weights()
+            if isinstance(self.value_head, nn.Linear):
+                self._initialize_weights()
         
         # Initialize hook state
         self._hooked_hidden_states: Optional[torch.Tensor] = None
