@@ -82,7 +82,7 @@ def upload_probe_to_hf(
     Args:
         probe_dir: Local directory containing the probe files
         repo_id: Destination repository ID in the format 'username/repo_name'
-        repo_subfolder: Optional subfolder within the repo to upload to
+        hf_repo_subfolder_prefix: Optional subfolder within the repo to upload to
         token: HF API token (required for uploading)
         private: Whether to make the repository private
         commit_message: Message for the commit
@@ -99,7 +99,7 @@ def upload_probe_to_hf(
         local_folder = Path(local_folder)
     
     if not local_folder.exists():
-        raise ValueError(f"Probe directory {probe_dir} does not exist")
+        raise ValueError(f"Probe directory {local_folder} does not exist")
 
     path_in_repo = os.path.join(hf_repo_subfolder_prefix, probe_id)
     
@@ -129,8 +129,8 @@ def upload_probe_to_hf(
     
     # Return the URL
     url = f"https://huggingface.co/{repo_id}"
-    if repo_subfolder:
-        url += f"/tree/main/{repo_subfolder}"
+    if hf_repo_subfolder_prefix:
+        url += f"/tree/main/{hf_repo_subfolder_prefix}"
     
     print(f"Successfully uploaded probe to {url}")
     return url
