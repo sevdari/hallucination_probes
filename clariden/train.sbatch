@@ -17,9 +17,13 @@ export HF_HUB_CACHE=/capstor/scratch/cscs/tkwiecinski/hallucination_probes/hf_ca
 
 # private keys
 export HF_TOKEN="$(cat ~/keys/.hf_token)"
-export HF_WRITE_TOKEN="$(cat ~/keys/.hf_token_write)"
 if [[ -f ~/keys/.wandb_key ]]; then
     export WANDB_API_KEY="$(cat ~/keys/.wandb_key)"
+fi
+
+# don't require to have hf_write_token for read-only operations, if this is missing, field upload_to_hf should be false
+if [[ -f ~/keys/.hf_token_write ]]; then
+    export WANDB_API_KEY="$(cat ~/keys/.hf_token_write)"
 fi
 
 # change this to your repo path
