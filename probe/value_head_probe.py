@@ -20,6 +20,7 @@ from utils.model_utils import (
     setup_lora_for_layers
 )
 from utils.probe_loader import download_probe_from_hf
+from probe.attention_probe import PerTokenAttentionProbe, AttentionProbeHead
 
 class ValueHeadProbe(nn.Module):
     """
@@ -81,9 +82,11 @@ class ValueHeadProbe(nn.Module):
                 dtype=model.dtype
             )
         else:
-            self.value_head = nn.Linear(
-                hidden_size * context_window_size, 1, 
-                device=model.device, 
+            self.value_head = PerTokenAttentionProbe(
+                hidden_size * context_window_size,
+                n_heads=4,
+                n_outputs=1,
+                device=model.device,
                 dtype=model.dtype
             )
             print(f"WARNING: Using seed=42 for the initialization of the probe")
@@ -232,7 +235,7 @@ class ValueHeadProbe(nn.Module):
         hidden_size = probe_config['hidden_size']
         probe_layer_idx = probe_config['layer_idx']
 
-        probe_head = nn.Linear(hidden_size, 1, device=device, dtype=dtype)
+        probe_head = PerTokenAttentionProbe(hidden_size, n_heads=4, n_outputs=1, device=device, dtype=dtype)
         
         state_dict = torch.load(
             path / "probe_head.bin",
