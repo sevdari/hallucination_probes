@@ -24,8 +24,12 @@ from annotation_pipeline.data_models import AnnotatedSpan
 logger = logging.getLogger(__name__)
 
 # %%
-
-ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(os.path.join(Path(__file__).parent, "entity_annotation.prompt")).read().strip()
+# check entity annotation prompt
+ENTITY_ANNOTATION_PROMPT_TEMPLATE = os.getenv("ENTITY_ANNOTATION_PROMPT_TEMPLATE")
+if ENTITY_ANNOTATION_PROMPT_TEMPLATE is None:
+    ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(os.path.join(Path(__file__).parent, "entity_annotation.prompt")).read().strip()
+else:
+    ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(ENTITY_ANNOTATION_PROMPT_TEMPLATE.strip()).read().strip()
 assert '{instruction}' in ENTITY_ANNOTATION_PROMPT_TEMPLATE \
     and '{completion}' in ENTITY_ANNOTATION_PROMPT_TEMPLATE
 

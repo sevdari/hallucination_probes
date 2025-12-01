@@ -37,7 +37,19 @@ load_dotenv()
 assert os.environ.get('ANTHROPIC_API_KEY', None) is not None, "ANTHROPIC_API_KEY is not set"
 assert os.environ.get('HF_WRITE_TOKEN', None) is not None, "HF_WRITE_TOKEN is not set (needed for pushing to HF hub)"
 
-LOCAL_RESULTS_DIR = Path(__file__).parent.parent / "annotation_pipeline_results"
+# Default directory for saving probes locally
+env_dir = os.getenv("LOCAL_RESULTS_DIR")
+if env_dir:
+    LOCAL_RESULTS_DIR = Path(env_dir)
+else:
+    LOCAL_RESULTS_DIR = Path(__file__).parent.parent / "annotation_pipeline_results"
+
+# safetooling cache dir
+env_cache_dir = os.getenv("SAFETYTOOLING_CACHE_DIR")
+if env_cache_dir:
+    SAFETYTOOLING_CACHE_DIR = Path(env_cache_dir)
+else:
+    SAFETYTOOLING_CACHE_DIR = Path.home() / ".safetytooling_cache"
 
 
 @dataclass
@@ -60,7 +72,7 @@ class PipelineConfig(ExperimentConfigBase):
     hf_dataset_split: str = "test"
     
     # Output settings
-    output_hf_dataset_name: str = "obalcells/labeled-entity-facts"
+    output_hf_dataset_name: str = "tymciurymciu/labeled-entity-facts"
     output_hf_dataset_subset: str = "clean_code_test"
     output_hf_dataset_split: str = "test"
     output_dir: Path = LOCAL_RESULTS_DIR
@@ -73,7 +85,7 @@ class PipelineConfig(ExperimentConfigBase):
     
     # Args needed by the ExperimentConfigBase base class
     datetime_str: str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safetytooling_cache_dir: Union[str, Path] = Path.home() / ".safetytooling_cache"
+    safetytooling_cache_dir: Union[str, Path] = SAFETYTOOLING_CACHE_DIR
     save_path: Optional[Path] = None
     log_to_file: bool = False
     
@@ -189,7 +201,7 @@ def load_items_to_process(cfg: PipelineConfig) -> List[DatasetItem]:
     logger.info(f"Loaded dataset: {len(dataset_items_raw)} items")
     
     # Convert to DatasetItem objects using the generic validation function
-    dataset_items = validate_dicts_to_pydantic(dataset_items_raw, DatasetItem, skip_invalid=True)
+    dataset_items = validate_dicts_to_pydantic(dataset_items_raw, DatasetItem, skip_invalid=True)[:10]
     
     # Log if some items failed validation
     if len(dataset_items) < len(dataset_items_raw):

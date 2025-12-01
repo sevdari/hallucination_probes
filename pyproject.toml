@@ -26,7 +26,7 @@ dependencies = [
   "pydantic>=2.6.0",
   "rouge-score>=0.1.2",
   # install safetytooling directly from Git for pip
-  "safetytooling @ git+https://github.com/safety-research/safety-tooling.git@main",
+  "safetytooling @ git+https://github.com/safety-research/safety-tooling@100cf43b4935465e6bb5428011734fa6c622d5a7",
   # Demo
   "modal>=0.61.0",
   "plotly>=5.22.0",
