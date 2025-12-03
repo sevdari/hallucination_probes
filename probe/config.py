@@ -29,6 +29,7 @@ class ProbeConfig:
     
     threshold: float = 0.5  # Classification threshold
     context_window_size: int = 1  # Size of context window for the probe
+    attention_probe_n_heads: int = 4  # Number of attention heads for the probe
     
     def __post_init__(self):
         """Validate configuration."""

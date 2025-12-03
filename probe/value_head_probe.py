@@ -39,6 +39,7 @@ class ValueHeadProbe(nn.Module):
         layer_idx: Optional[int] = None,
         path: Optional[Union[str, Path]] = None,
         context_window_size: Optional[int] = 1,
+        attention_probe_n_heads: int = 4
     ):
         """
         Initialize the ValueHeadProbe.
@@ -69,7 +70,8 @@ class ValueHeadProbe(nn.Module):
         self.target_module = model_layers[layer_idx]
         self.target_layer_name = self.target_module.__class__.__name__
         self.context_window_size = context_window_size
-        
+        self.attention_probe_n_heads = attention_probe_n_heads
+
         if not isinstance(model, PeftModel):
             print("WARNING: Model is not a PeftModel. Remember to add LoRA adapters if needed.")
         
@@ -84,7 +86,7 @@ class ValueHeadProbe(nn.Module):
         else:
             self.value_head = PerTokenAttentionProbe(
                 hidden_size * context_window_size,
-                n_heads=4,
+                n_heads=self.attention_probe_n_heads,
                 n_outputs=1,
                 device=model.device,
                 dtype=model.dtype
@@ -303,7 +305,8 @@ def setup_probe(
         probe = ValueHeadProbe(
             model, 
             layer_idx=probe_config.layer,
-            context_window_size=probe_config.context_window_size
+            context_window_size=probe_config.context_window_size,
+            attention_probe_n_heads=probe_config.attention_probe_n_heads
         )
   
     return model, probe
