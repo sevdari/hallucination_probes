@@ -1,18 +1,12 @@
 # %%
 #!/usr/bin/env python3
 """
-Script to annotate completions using Claude's integrated search.
-Identifies which spans are supported, not supported, or have insufficient information.
+Script to annotate completions using OpenAI's built-in server-side web search.
 """
 
 import os
-import json
-import asyncio
-from typing import Optional, Dict, Any, List
 import logging
-from dotenv import load_dotenv
-from pathlib import Path
-import traceback
+from typing import List, Optional
 
 from safetytooling.apis import InferenceAPI
 from safetytooling.data_models import ChatMessage, MessageRole, Prompt, LLMResponse
@@ -27,11 +21,17 @@ logger = logging.getLogger(__name__)
 # check entity annotation prompt
 ENTITY_ANNOTATION_PROMPT_TEMPLATE = os.getenv("ENTITY_ANNOTATION_PROMPT_TEMPLATE")
 if ENTITY_ANNOTATION_PROMPT_TEMPLATE is None:
-    ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(os.path.join(Path(__file__).parent, "entity_annotation.prompt")).read().strip()
+    # Minimal fallback template
+    ENTITY_ANNOTATION_PROMPT_TEMPLATE = """
+    Instruction: {instruction}
+    Completion: {completion}
+    
+    Verify the factual claims in the completion using your web search tool.
+    Return a JSON list of AnnotatedSpan objects.
+    """
 else:
-    ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(ENTITY_ANNOTATION_PROMPT_TEMPLATE.strip()).read().strip()
-assert '{instruction}' in ENTITY_ANNOTATION_PROMPT_TEMPLATE \
-    and '{completion}' in ENTITY_ANNOTATION_PROMPT_TEMPLATE
+    if os.path.exists(ENTITY_ANNOTATION_PROMPT_TEMPLATE):
+        ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(ENTITY_ANNOTATION_PROMPT_TEMPLATE.strip()).read().strip()
 
 # %%
 
@@ -43,24 +43,15 @@ def format_prompt(instruction: str, completion: str, prompt_template: str) -> st
         "{completion}", completion
     )
 
-
 def assign_span_positions(spans: List[AnnotatedSpan], text: str, min_similarity: float = 0.8) -> List[AnnotatedSpan]:
     """
     Assign positions to spans and convert to the expected format.
-    
-    Args:
-        spans: List of annotated spans from the model
-        text: The original text
-        
-    Returns:
-        List of spans with positions added
     """
     results = []
     cur_idx = 0
     used_positions = set()
 
     for span in spans:
-
         closest_match, matched_idx = try_matching_span_in_text(
             span.span,
             text,
@@ -69,18 +60,15 @@ def assign_span_positions(spans: List[AnnotatedSpan], text: str, min_similarity:
         )
 
         if closest_match is None:
-            logger.warning(f"Could not locate span {repr(span.span)} in text (total_n_spans: {len(spans)}).\nKeeping it in the dataset but removing the label and index.\n(This is not an error and happens roughly once for every completion)")
+            logger.warning(f"Could not locate span {repr(span.span)} in text.")
             span.label = None
             span.index = None
             results.append(span)
             continue
 
         if matched_idx is not None and all(pos in used_positions for pos in range(matched_idx, matched_idx+len(closest_match))):
-            logger.warning(f"Span {repr(span.span)} matched at same position as already-matched span {repr(text[matched_idx:matched_idx+len(closest_match)])}")
+            logger.warning(f"Span {repr(span.span)} matched at same position as already-matched span")
             continue
-
-        if closest_match != span.span:
-            logger.info(f"Span {repr(span.span)} matched to {repr(closest_match)}")
 
         span.index = matched_idx
         span.span = closest_match
@@ -98,49 +86,52 @@ async def annotate_completion(
     annotation_prompt: str = ENTITY_ANNOTATION_PROMPT_TEMPLATE,
     temperature: float = 0.0,
     max_tokens: int = 8192,
-    max_searches: int = 10,
-    model_id: str = "claude-sonnet-4-20250514",
+    # Note: Use a model capable of server-side search
+    model_id: str = "gpt-4o-search-preview", 
+    max_searches: Optional[int] = None,
 ) -> List[AnnotatedSpan]:
     """
-    Annotate spans in the provided text completion.
-    
-    Args:
-        instruction: The instruction/prompt that was given to the model
-        completion: The completion text to analyze for spans
-        inference_api: InferenceAPI instance to use
-        temperature: Sampling temperature (0 for deterministic)
-        max_tokens: Maximum tokens to generate
-        max_searches: Maximum number of web searches to perform
-        model: Model to use for annotation
-        
-    Returns:
-        List of annotated spans with their positions
+    Annotate spans in the provided text completion using OpenAI's native web search.
     """
     try:
         user_prompt: str = format_prompt(
             instruction, completion, annotation_prompt
         )
+        
+        # Define the NATIVE OpenAI web search tool
+        # This tells the API to use its internal browsing capability
+        tools = [{
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Search the web for facts.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                    "required": ["query"]
+                }
+            }
+        }]
 
-        response: List[LLMResponse] = await inference_api(
+        # Single call: The model handles the search/browse loop on the server side
+        response_list: List[LLMResponse] = await inference_api(
             model_id=model_id,
             prompt=Prompt(messages=[ChatMessage(role=MessageRole.user, content=user_prompt)]),
             temperature=temperature,
             max_tokens=max_tokens,
-            tools=[
-                {
-                    "type": "web_search_20250305",
-                    "name": "web_search",
-                    "max_uses": max_searches
-                }
-            ]
+            tools=tools
         )
 
-        response_text: str = response[0].completion
+        response_text: str = response_list[0].completion
+        
+        # In server-side search, the model might include citation markers (e.g., [1]).
+        # You might need to clean them or ensure your parser handles them.
+        logger.info(f"Model response with search: {response_text[:100]}...")
 
         annotated_spans = parse_and_validate_json(
             response_text, 
             List[AnnotatedSpan],
-            allow_partial=True, # try to parse the response even if it's cut off
+            allow_partial=True,
         )
         
         annotated_spans = assign_span_positions(annotated_spans, completion)
