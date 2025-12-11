@@ -2,7 +2,7 @@
 #SBATCH --account=large-sc-2
 #SBATCH -p normal
 #SBATCH --time=12:00:00
-#SBATCH --job-name=testing_upload_to_hf
+#SBATCH --job-name=generation_pipeline
 #SBATCH --output=log/%x-%j.out
 #SBATCH --error=log/%x-%j.err
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
@@ -39,12 +39,11 @@ git pull
 git checkout  compare_models
 git pull
 
-cd generation_pipeline/
 
-uv pip install --no-deps  .
-uv pip install transformers==0.46.0 
+uv pip install --no-deps  . --system
+uv pip install transformers==0.46.0 --system
 
-python generate.py
+python generation_pipeline/generate.py
 
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash
