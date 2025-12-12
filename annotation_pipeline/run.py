@@ -202,7 +202,7 @@ def load_items_to_process(cfg: PipelineConfig) -> List[DatasetItem]:
     logger.info(f"Loaded dataset: {len(dataset_items_raw)} items")
     
     # Convert to DatasetItem objects using the generic validation function
-    dataset_items = validate_dicts_to_pydantic(dataset_items_raw, DatasetItem, skip_invalid=True)[:10]
+    dataset_items = validate_dicts_to_pydantic(dataset_items_raw, DatasetItem, skip_invalid=True)
     
     # Log if some items failed validation
     if len(dataset_items) < len(dataset_items_raw):
