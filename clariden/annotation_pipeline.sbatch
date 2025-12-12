@@ -55,7 +55,7 @@ uv pip install "git+https://github.com/safety-research/safety-tooling@100cf43b49
 uv pip install  opencv-python==4.8.0.74 --system
 uv pip install --upgrade pyarrow --system
 
-uv pip install --upgrade openai --system
+uv pip install --upgrade openai --system --no-cache-dir
 
 
 python annotation_pipeline/run.py 

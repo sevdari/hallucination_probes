@@ -104,7 +104,7 @@ async def annotate_completion(
                 "type": "web_search",
                 "user_location": {
                     "type": "approximate",
-                    "country": "Switzerland"
+                    "country": "CH"
                 }
             }]
         )
