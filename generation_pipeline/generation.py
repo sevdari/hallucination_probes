@@ -61,7 +61,7 @@ def push_progress_to_hub(current_results, repo_id, step_count):
     print(f"\n[Step {step_count}] Syncing {len(current_results)} items to Hugging Face ({repo_id})...")
     try:
         temp_dataset = Dataset.from_list(current_results)
-        temp_dataset.push_to_hub(repo_id, split=SPLIT, config_name=SUBSET_NAME, private=False)
+        temp_dataset.push_to_hub(repo_id, split=SPLIT, config_name=SUBSET_NAME, private=False, token=os.environ.get("HF_WRITE_TOKEN"))
         print("Sync complete.")
     except Exception as e:
         print(f"Sync failed: {e}")
