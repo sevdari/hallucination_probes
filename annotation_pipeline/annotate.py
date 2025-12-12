@@ -1,15 +1,15 @@
 # %%
 #!/usr/bin/env python3
 """
-Script to annotate completions using OpenAI's built-in server-side web search.
+Script to annotate completions using OpenAI's new Responses API with integrated search.
 """
 
 import os
 import logging
-from typing import List, Optional
+import asyncio
+from typing import List, Any
 
-from safetytooling.apis import InferenceAPI
-from safetytooling.data_models import ChatMessage, MessageRole, Prompt, LLMResponse
+from openai import AsyncOpenAI
 
 from utils.parsing import parse_and_validate_json
 from utils.string_utils import try_matching_span_in_text
@@ -17,11 +17,9 @@ from annotation_pipeline.data_models import AnnotatedSpan
 
 logger = logging.getLogger(__name__)
 
-# %%
-# check entity annotation prompt
+# fallback to default prompt if env var not set
 ENTITY_ANNOTATION_PROMPT_TEMPLATE = os.getenv("ENTITY_ANNOTATION_PROMPT_TEMPLATE")
 if ENTITY_ANNOTATION_PROMPT_TEMPLATE is None:
-    # Minimal fallback template
     ENTITY_ANNOTATION_PROMPT_TEMPLATE = """
     Instruction: {instruction}
     Completion: {completion}
@@ -34,7 +32,6 @@ else:
         ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(ENTITY_ANNOTATION_PROMPT_TEMPLATE.strip()).read().strip()
 
 # %%
-
 def format_prompt(instruction: str, completion: str, prompt_template: str) -> str:
     """Format the user prompt with the text to analyze"""
     return prompt_template.replace(
@@ -82,64 +79,55 @@ def assign_span_positions(spans: List[AnnotatedSpan], text: str, min_similarity:
 async def annotate_completion(
     instruction: str,
     completion: str,
-    inference_api: InferenceAPI,
+    inference_api: Any = None, # kept for signature
     annotation_prompt: str = ENTITY_ANNOTATION_PROMPT_TEMPLATE,
-    temperature: float = 0.0,
-    max_tokens: int = 8192,
-    # Note: Use a model capable of server-side search
-    model_id: str = "gpt-4o-search-preview", 
-    max_searches: Optional[int] = None,
+    temperature: float = 0.0, # kept for signature
+    max_tokens: int = 4096, # kept for signature
+    model_id: str = "gpt-4o", # Responses API works with standard model IDs
+    max_searches: int = 5,
 ) -> List[AnnotatedSpan]:
     """
-    Annotate spans in the provided text completion using OpenAI's native web search.
+    Annotate spans using OpenAI's Responses API (Server-side Search).
     """
+    
+    client = AsyncOpenAI()
+
+    # Prepare input content
+    user_content = format_prompt(instruction, completion, annotation_prompt)
+
     try:
-        user_prompt: str = format_prompt(
-            instruction, completion, annotation_prompt
-        )
-        
-        # Define the NATIVE OpenAI web search tool
-        # This tells the API to use its internal browsing capability
-        tools = [{
-            "type": "function",
-            "function": {
-                "name": "web_search",
-                "description": "Search the web for facts.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"query": {"type": "string"}},
-                    "required": ["query"]
+        # NOTE: 'input' replaces 'messages', 'tools' uses 'web_search_preview'
+        response = await client.responses.create(
+            model=model_id,
+            input=user_content,
+            tools=[{
+                "type": "web_search",
+                "user_location": {
+                    "type": "approximate",
+                    "country": "Switzerland"
                 }
-            }
-        }]
-
-        # Single call: The model handles the search/browse loop on the server side
-        response_list: List[LLMResponse] = await inference_api(
-            model_id=model_id,
-            prompt=Prompt(messages=[ChatMessage(role=MessageRole.user, content=user_prompt)]),
-            temperature=temperature,
-            max_tokens=max_tokens,
-            tools=tools
+            }]
         )
-
-        response_text: str = response_list[0].completion
         
-        # In server-side search, the model might include citation markers (e.g., [1]).
-        # You might need to clean them or ensure your parser handles them.
-        logger.info(f"Model response with search: {response_text[:100]}...")
-
+        # Responses API returns the final answer in 'output_text'
+        final_content = response.output_text
+        
+        logger.info(f"Received response from model (Length: {len(final_content)} chars)")
+        
+        # Parse JSON
         annotated_spans = parse_and_validate_json(
-            response_text, 
+            final_content, 
             List[AnnotatedSpan],
-            allow_partial=True,
+            allow_partial=True
         )
         
-        annotated_spans = assign_span_positions(annotated_spans, completion)
+        if annotated_spans:
+            annotated_spans = assign_span_positions(annotated_spans, completion)
+            logger.info(f"Successfully annotated {len(annotated_spans)} spans")
+            return annotated_spans
         
-        logger.info(f"Successfully annotated {len(annotated_spans)} spans")
+        return []
 
-        return annotated_spans
-        
     except Exception as e:
-        logger.error(f"Error during span annotation: {e}")
+        logger.error(f"Error during OpenAI Responses API annotation: {e}")
         raise
