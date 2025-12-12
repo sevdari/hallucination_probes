@@ -41,9 +41,9 @@ git pull
 
 
 uv pip install --no-deps  . --system
-uv pip install transformers==0.46.0 --system
+uv pip install transformers==4.56.0 --system
 
-python generation_pipeline/generate.py
+python generation_pipeline/generation.py
 
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash
