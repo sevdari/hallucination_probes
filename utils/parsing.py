@@ -43,7 +43,7 @@ def parse_and_validate_json(
     
     # Remove markdown code fences (``````)
     # Using specific split logic is often safer than regex substitution for multi-line blocks
-    if "```
+    if "```" in cleaned_response:
         parts = cleaned_response.split("```")
         # Usually the code block is the second part (index 1) if it's wrapped
         # e.g., "Here is JSON:\n``````" -> ["Here...", "json\n[...]\n", ""]
