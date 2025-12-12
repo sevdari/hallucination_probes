@@ -25,10 +25,9 @@ OUTPUT_FILE = BASE_OUTPUT_DIR + "longfact_generations_" + SUBSET_NAME + ".jsonl"
 
 # GENERATION PARAMETERS
 BATCH_SIZE = 64 # for apertus-8B
-# hyperparams from the paper
 MAX_NEW_TOKENS = 2048 
 TEMPERATURE = 0.1
-DO_SAMPLE = True # Required for temp > 0
+DO_SAMPLE = True 
 
 # ==========================================
 # SETUP & LOADING
@@ -55,31 +54,74 @@ model = AutoModelForCausalLM.from_pretrained(
 model.eval()
 
 # ==========================================
+# HELPER FUNCTIONS
+# ==========================================
 def push_progress_to_hub(current_results, repo_id, step_count):
     """Creates a dataset from current results and pushes to Hub."""
     print(f"\n[Step {step_count}] Syncing {len(current_results)} items to Hugging Face ({repo_id})...")
     try:
-        # Create temporary dataset from list of dicts
         temp_dataset = Dataset.from_list(current_results)
-        temp_dataset.push_to_hub(repo_id, split=SPLIT,  config_name=SUBSET_NAME, private=False)
+        temp_dataset.push_to_hub(repo_id, split=SPLIT, config_name=SUBSET_NAME, private=False)
         print("Sync complete.")
     except Exception as e:
         print(f"Sync failed: {e}")
         print("Continuing generation (local progress is safe)...")
 
 # ==========================================
+# RESUME LOGIC
+# ==========================================
+results = []
+start_idx = 0
+
+if os.path.exists(OUTPUT_FILE):
+    print(f"Found existing output file: {OUTPUT_FILE}")
+    print("Reading processed items...")
+    try:
+        with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    results.append(json.loads(line))
+        
+        num_processed = len(results)
+        print(f"Loaded {num_processed} previously generated items.")
+        
+        if num_processed > 0:
+            # 1. Inspect last item
+            last_item = results[-1]
+            last_prompt = last_item["conversation"][0]["content"]
+            print(f"Last processed prompt (preview): {last_prompt[:100]}...")
+            
+            # 2. Push current state to Hub (Safety check)
+            print("Ensuring existing progress is synced to Hub before resuming...")
+            push_progress_to_hub(results, TARGET_REPO_ID, num_processed)
+            
+            # 3. Determine where to resume
+            start_idx = num_processed
+            print(f"Resuming generation from index {start_idx}...")
+            
+    except Exception as e:
+        print(f"Error reading checkpoint file: {e}")
+        print("Starting from scratch (index 0).")
+        results = []
+        start_idx = 0
+else:
+    print("No checkpoint found. Starting from scratch.")
+
+# ==========================================
 # GENERATION LOOP
 # ==========================================
-print(f"Starting generation for {len(dataset)} prompts...")
+# We slice the dataset to skip already processed items
+# Note: Dataset slicing in HF datasets is efficient (lazy)
+remaining_dataset = dataset.select(range(start_idx, len(dataset)))
 
-results = []
+print(f"Starting generation for remaining {len(remaining_dataset)} prompts...")
+
 count_since_last_upload = 0
-total_processed = 0
+total_processed = len(results) # Global counter including resumed items
 
-# We use tqdm for the main loop
-for batch in tqdm(dataset.iter(batch_size=BATCH_SIZE), total=len(dataset)//BATCH_SIZE + 1):
+# Iterate over the REMAINING part of the dataset
+for batch in tqdm(remaining_dataset.iter(batch_size=BATCH_SIZE), total=len(remaining_dataset)//BATCH_SIZE + 1):
     
-    # NOTE: obacells uses sometimes "prompt", sometimes "question", longfact++ uses question
     if "prompt" in batch:
         prompts = batch["prompt"]
     else:
@@ -143,14 +185,16 @@ for batch in tqdm(dataset.iter(batch_size=BATCH_SIZE), total=len(dataset)//BATCH
     count_since_last_upload += current_batch_size
 
     if count_since_last_upload >= UPLOAD_INTERVAL:
-        # Save locally (checkpoint), could be then used to upload again to hf
+        # Save locally (checkpoint) - Append mode is risky if mixed with rewriting, 
+        # so we rewrite full list to ensure consistency or append just new ones.
+        # Rewriting is safer for avoiding dupes if crash happens during write.
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             for item in results:
                 f.write(json.dumps(item) + "\n")
         
         # Then push to hub
         push_progress_to_hub(results, TARGET_REPO_ID, total_processed)
-        count_since_last_upload = 0 # Reset counter
+        count_since_last_upload = 0 
 
 # ==========================================
 # FINAL SAVE
