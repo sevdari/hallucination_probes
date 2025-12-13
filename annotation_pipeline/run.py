@@ -69,12 +69,12 @@ class PipelineConfig(ExperimentConfigBase):
     
     # Input dataset settings
     hf_dataset_name: str = "tymciurymciu/longfact-generations"
-    hf_dataset_subset: str = 'Apertus_8B_Instruct_2509'
+    hf_dataset_subset: str = 'Meta_Llama_3.1_8B_Instruct'
     hf_dataset_split: str = "train"
     
     # Output settings
     output_hf_dataset_name: str = "tymciurymciu/longfact-annotated"
-    output_hf_dataset_subset: str = 'Apertus_8B_Instruct_2509'
+    output_hf_dataset_subset: str = 'Meta_Llama_3.1_8B_Instruct'
     output_hf_dataset_split: str = "train"
     output_dir: Path = LOCAL_RESULTS_DIR
     

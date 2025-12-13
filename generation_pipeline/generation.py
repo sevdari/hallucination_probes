@@ -15,7 +15,7 @@ INPUT_DATASET = "claserken/longfact"
 SPLIT = "train"
 
 # UPLOAD SETTINGS
-TARGET_REPO_ID = "tymciurymciu/base_longfact-generations" 
+TARGET_REPO_ID = "tymciurymciu/base-longfact-generations" 
 UPLOAD_INTERVAL = 1000 
 SUBSET_NAME = MODEL_ID.split("/")[-1].replace("-", "_")
 
