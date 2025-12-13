@@ -11,17 +11,17 @@ from tqdm import tqdm
 MODEL_ID = "swiss-ai/Apertus-8B-Instruct-2509"
 
 # INPUT DATASET
-INPUT_DATASET = "obalcells/longfact-augmented-prompts"
+INPUT_DATASET = "claserken/longfact"
 SPLIT = "train"
 
 # UPLOAD SETTINGS
-TARGET_REPO_ID = "tymciurymciu/longfact-generations" 
+TARGET_REPO_ID = "tymciurymciu/base-longfact-generations" 
 UPLOAD_INTERVAL = 1000 
 SUBSET_NAME = MODEL_ID.split("/")[-1].replace("-", "_")
 
 # OUTPUT
 BASE_OUTPUT_DIR = "/capstor/scratch/cscs/tkwiecinski/hallucination-probes/generation_pipeline/outputs/"
-OUTPUT_FILE = BASE_OUTPUT_DIR + "longfact_generations_" + SUBSET_NAME + ".jsonl"
+OUTPUT_FILE = BASE_OUTPUT_DIR + "base_longfact_generations_" + SUBSET_NAME + ".jsonl"
 
 # GENERATION PARAMETERS
 BATCH_SIZE = 64 # for apertus-8B
