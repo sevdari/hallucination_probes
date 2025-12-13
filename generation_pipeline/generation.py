@@ -8,7 +8,7 @@ from tqdm import tqdm
 # ==========================================
 # CONFIG
 # ==========================================
-MODEL_ID = "swiss-ai/Apertus-8B-Instruct-2509"
+MODEL_ID = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
 # INPUT DATASET
 INPUT_DATASET = "claserken/longfact"
