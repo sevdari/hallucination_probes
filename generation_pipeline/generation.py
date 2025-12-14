@@ -8,14 +8,14 @@ from tqdm import tqdm
 # ==========================================
 # CONFIG
 # ==========================================
-MODEL_ID = "swiss-ai/Apertus-8B-Instruct-2509"
+MODEL_ID = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # INPUT DATASET
-INPUT_DATASET = "claserken/longfact"
+INPUT_DATASET = "obalcells/longfact-augmented-prompts"
 SPLIT = "train"
 
 # UPLOAD SETTINGS
-TARGET_REPO_ID = "tymciurymciu/base-longfact-generations" 
+TARGET_REPO_ID = "tymciurymciu/longfact-generations" 
 UPLOAD_INTERVAL = 1000 
 SUBSET_NAME = MODEL_ID.split("/")[-1].replace("-", "_")
 
