@@ -35,7 +35,7 @@ export CUDA_VISIBLE_DEVICES=0
 uv pip install --no-deps  . --system
 
 # multiarray job setup
-CONFIGS=(train_config.yaml train_config_apertus.yaml train_config_apertus_no_lora.yaml train_config_no_lora.yaml)
+CONFIGS=(train_config_apertus_no_lora_our_dataset.yaml train_config_apertus_our_dataset.yaml train_config_apertus_no_lora.yaml train_config_no_lora.yaml)
 SELECTED_CONFIG=${CONFIGS[$SLURM_ARRAY_TASK_ID]}
 
 echo "Running with config: $SELECTED_CONFIG"
