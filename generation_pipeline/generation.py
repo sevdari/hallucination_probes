@@ -19,6 +19,10 @@ TARGET_REPO_ID = "tymciurymciu/longfact-generations"
 UPLOAD_INTERVAL = 1000 
 SUBSET_NAME = MODEL_ID.split("/")[-1].replace("-", "_")
 
+# I made a mistake with naming the repo subset, this is for the consistency
+if SUBSET_NAME == "Llama_3.1_8B_Instruct":
+    SUBSET_NAME = "Meta_" + SUBSET_NAME
+
 # OUTPUT
 BASE_OUTPUT_DIR = "/capstor/scratch/cscs/tkwiecinski/hallucination-probes/generation_pipeline/outputs/"
 OUTPUT_FILE = BASE_OUTPUT_DIR + "longfact_generations_" + SUBSET_NAME + ".jsonl"
