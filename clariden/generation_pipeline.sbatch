@@ -25,9 +25,7 @@ export HF_TOKEN="$(cat ~/keys/.hf_token)"
 if [[ -f ~/keys/.wandb_key ]]; then
     export WANDB_API_KEY="$(cat ~/keys/.wandb_key)"
 fi
-if [[ -f ~/keys/.hf_token_write ]]; then
-    export HF_WRITE_TOKEN="$(cat ~/keys/.hf_token_write)"
-fi
+export HF_WRITE_TOKEN="$(cat ~/keys/.hf_token_write)"
 if [[ -f ~/keys/.anthropic_key ]]; then
     export ANTHROPIC_API_KEY="$(cat ~/keys/.anthropic_key)"
 fi
