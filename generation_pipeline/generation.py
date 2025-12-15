@@ -21,7 +21,7 @@ SUBSET_NAME = MODEL_ID.split("/")[-1].replace("-", "_")
 
 # OUTPUT
 BASE_OUTPUT_DIR = "/capstor/scratch/cscs/tkwiecinski/hallucination-probes/generation_pipeline/outputs/"
-OUTPUT_FILE = BASE_OUTPUT_DIR + "base_longfact_generations_" + SUBSET_NAME + ".jsonl"
+OUTPUT_FILE = BASE_OUTPUT_DIR + "longfact_generations_" + SUBSET_NAME + ".jsonl"
 
 # GENERATION PARAMETERS
 BATCH_SIZE = 64 # for apertus-8B
