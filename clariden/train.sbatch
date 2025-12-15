@@ -5,7 +5,7 @@
 #SBATCH --job-name=paper_reproduce
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
-#SBATCH --array=0-3
+#SBATCH --array=0-1
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -26,7 +26,7 @@ fi
 cd /workspace/hallucination_probes/
 
 git pull
-git checkout  reproduce_experiments
+git checkout  compare_models
 git pull
 
 
@@ -35,7 +35,7 @@ export CUDA_VISIBLE_DEVICES=0
 uv pip install --no-deps  . --system
 
 # multiarray job setup
-CONFIGS=(train_config_apertus_no_lora_our_dataset.yaml train_config_apertus_our_dataset.yaml train_config_apertus_no_lora.yaml train_config_no_lora.yaml)
+CONFIGS=(train_config_apertus_no_lora_our_dataset.yaml train_config_apertus_our_dataset.yaml)
 SELECTED_CONFIG=${CONFIGS[$SLURM_ARRAY_TASK_ID]}
 
 echo "Running with config: $SELECTED_CONFIG"
