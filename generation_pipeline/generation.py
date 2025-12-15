@@ -8,7 +8,7 @@ from tqdm import tqdm
 # ==========================================
 # CONFIG
 # ==========================================
-MODEL_ID = "meta-llama/Meta_Llama_3.1_8B_Instruct"
+MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
 
 # INPUT DATASET
 INPUT_DATASET = "obalcells/longfact-augmented-prompts"
