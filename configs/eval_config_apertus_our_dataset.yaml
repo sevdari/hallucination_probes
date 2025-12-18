@@ -1,0 +1,31 @@
+# Example training configuration for hallucination detection probe
+# Example evaluation configuration for hallucination detection probe
+
+# Probe configuration
+probe_config:
+  probe_id: "apertus_no_lora_our_split"
+  model_name: "swiss-ai/Apertus-8B-Instruct-2509"
+  layer: 30
+  threshold: 0.5
+  load_from: "hf"  # Options: "disk", "hf", or null
+  hf_repo_id: "tymciurymciu/hallucination-probes"
+
+# Batch size for evaluation
+per_device_eval_batch_size: 8
+
+# Output configuration
+save_predictions: true
+save_roc_curves: true
+save_raw_results: false
+
+# Datasets to evaluate on
+datasets:
+  - dataset_id: "base_longfact_test"
+    hf_repo: "tymciurymciu/longfact-test-split"
+    subset: "Meta_Llama_3.1_8B_Instruct"
+    split: "test"
+    max_length: 1536
+    pos_weight: 10.0
+    neg_weight: 10.0
+    default_ignore: false
+    shuffle: false
