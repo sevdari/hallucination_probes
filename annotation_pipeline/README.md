@@ -1,6 +1,6 @@
 # Annotation Pipeline
 
-This pipeline annotates completions using Claude powered by web search.
+This pipeline annotates completions using OpenAI powered by web search.
 
 ## Requirements
 

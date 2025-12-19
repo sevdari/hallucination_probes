@@ -28,6 +28,7 @@ from utils.parsing import validate_dicts_to_pydantic
 from annotation_pipeline.annotate import annotate_completion
 from annotation_pipeline.data_models import DatasetItem, AnnotatedSpan
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -35,10 +36,22 @@ load_dotenv()
 
 # Ensure required environment variables are set
 assert os.environ.get('ANTHROPIC_API_KEY', None) is not None, "ANTHROPIC_API_KEY is not set"
+assert os.environ.get('OPENAI_API_KEY', None) is not None, "OPENAI_API_KEY is not set"
 assert os.environ.get('HF_WRITE_TOKEN', None) is not None, "HF_WRITE_TOKEN is not set (needed for pushing to HF hub)"
 
-LOCAL_RESULTS_DIR = Path(__file__).parent.parent / "annotation_pipeline_results"
+# Default directory for saving probes locally
+env_dir = os.getenv("LOCAL_RESULTS_DIR")
+if env_dir:
+    LOCAL_RESULTS_DIR = Path(env_dir)
+else:
+    LOCAL_RESULTS_DIR = Path(__file__).parent.parent / "annotation_pipeline_results"
 
+# safetooling cache dir
+env_cache_dir = os.getenv("SAFETYTOOLING_CACHE_DIR")
+if env_cache_dir:
+    SAFETYTOOLING_CACHE_DIR = Path(env_cache_dir)
+else:
+    SAFETYTOOLING_CACHE_DIR = Path.home() / ".safetytooling_cache"
 
 @dataclass
 class PipelineConfig(ExperimentConfigBase):
@@ -49,20 +62,20 @@ class PipelineConfig(ExperimentConfigBase):
     """
     
     # Model and API settings
-    model_id: str = "claude-sonnet-4-20250514"
+    model_id: str = "gpt-4o"
     temperature: float = 0.0
     max_searches: int = 15
     max_tokens: int = 8192
     
     # Input dataset settings
-    hf_dataset_name: str = "obalcells/generations"
-    hf_dataset_subset: str = "healthbench_subset"
-    hf_dataset_split: str = "test"
+    hf_dataset_name: str = "tymciurymciu/longfact-generations"
+    hf_dataset_subset: str = 'Meta_Llama_3.1_8B_Instruct'
+    hf_dataset_split: str = "train"
     
     # Output settings
-    output_hf_dataset_name: str = "obalcells/labeled-entity-facts"
-    output_hf_dataset_subset: str = "clean_code_test"
-    output_hf_dataset_split: str = "test"
+    output_hf_dataset_name: str = "tymciurymciu/longfact-annotated"
+    output_hf_dataset_subset: str = 'Meta_Llama_3.1_8B_Instruct'
+    output_hf_dataset_split: str = "train"
     output_dir: Path = LOCAL_RESULTS_DIR
     
     # Processing settings
@@ -73,7 +86,7 @@ class PipelineConfig(ExperimentConfigBase):
     
     # Args needed by the ExperimentConfigBase base class
     datetime_str: str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    safetytooling_cache_dir: Union[str, Path] = Path.home() / ".safetytooling_cache"
+    safetytooling_cache_dir: Union[str, Path] = SAFETYTOOLING_CACHE_DIR
     save_path: Optional[Path] = None
     log_to_file: bool = False
     
@@ -349,6 +362,7 @@ async def main(cfg: PipelineConfig):
         openai_num_threads=cfg.max_concurrent_tasks,
         deepseek_num_threads=cfg.max_concurrent_tasks,
     )
+
     
     if not cfg.parallel:
         # Sequential processing

@@ -55,10 +55,18 @@ def parse_and_validate_json(
         )
 
     json_str = json_match.group(0).strip()
+
+    # remove markdown links
+        
+    pattern = r"\(\[(.*?)\]\((.*?)\)\)"
+    replacement = r"Source: \2"
+
+    json_str_clean = re.sub(pattern, replacement, json_str)
+
     
     try:
         # Parse JSON
-        parsed = from_json(json_str, allow_partial=allow_partial)
+        parsed = from_json(json_str_clean, allow_partial=allow_partial)
         
         # Validate against schema
         validated_data = parse_obj_as(schema, parsed)
@@ -68,7 +76,7 @@ def parse_and_validate_json(
     except Exception as e:
         raise ValueError(
             f"Error parsing/validating JSON: {e}\n"
-            f"JSON string: {json_str[:200]}..."
+            f"JSON string: {json_str_clean[:200]}..."
         ) from e
 
 
