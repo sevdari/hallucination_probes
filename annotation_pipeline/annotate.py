@@ -29,7 +29,8 @@ if ENTITY_ANNOTATION_PROMPT_TEMPLATE is None:
     """
 else:
     if os.path.exists(ENTITY_ANNOTATION_PROMPT_TEMPLATE):
-        ENTITY_ANNOTATION_PROMPT_TEMPLATE = open(ENTITY_ANNOTATION_PROMPT_TEMPLATE.strip()).read().strip()
+        with open(ENTITY_ANNOTATION_PROMPT_TEMPLATE.strip(), "r", encoding="utf-8") as f:
+            ENTITY_ANNOTATION_PROMPT_TEMPLATE = f.read().strip()
 
 # %%
 def format_prompt(instruction: str, completion: str, prompt_template: str) -> str:
