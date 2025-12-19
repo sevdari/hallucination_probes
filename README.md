@@ -5,7 +5,7 @@ This is the codebase for the project on multitoken hallucination prediction with
 In scope of the project we:
 1. reproduced the project, along with the annotation pipeline for generating the dataset with annotated hallucination spans
 2. implemented and evaluated multitoken probes concatenating the tokens
-3. implemented and evaluated 
+3. implemented and evaluated attention probes
 
 
 In the `./clariden/` directory there are some files and scripts that help with working on the cluster, including sbatch scripts and environment files.
