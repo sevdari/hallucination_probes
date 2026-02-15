@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --account=large-sc-2
+#SBATCH --account=infra01
 #SBATCH -p normal
 #SBATCH --time=12:00:00
-#SBATCH --job-name=paper_reproduce
+#SBATCH --job-name=apertus-lora-comparison
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
-#SBATCH --array=0-1
+#SBATCH --array=0-3
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -30,7 +30,7 @@ fi
 cd /workspace/hallucination_probes/
 
 git pull
-git checkout  compare_models
+git checkout  transferability
 git pull
 
 
@@ -39,7 +39,7 @@ export CUDA_VISIBLE_DEVICES=0
 uv pip install --no-deps  . --system
 
 # multiarray job setup
-CONFIGS=(train_config_apertus_no_lora_our_dataset.yaml train_config_apertus_our_dataset.yaml)
+CONFIGS=(our_dataset/train_config_apertus_no_lora.yaml our_dataset/train_config_apertus_kl0.5.yaml our_dataset/train_config_llama_no_lora.yaml our_dataset/train_config_llama_kl0.5.yaml)
 SELECTED_CONFIG=${CONFIGS[$SLURM_ARRAY_TASK_ID]}
 
 echo "Running with config: $SELECTED_CONFIG"
