@@ -1,12 +1,12 @@
 # Example training configuration for hallucination detection probe
 
 probe_config:
-  probe_id: "apertus_no_lora_our_split"
+  probe_id: "apertus_lora_kl=0.5_our"
 
   model_name: "swiss-ai/Apertus-8B-Instruct-2509"
   layer: 30  # Second to last layer for Llama 3.1 8B
 
-  lora_layers: "none"
+  lora_layers: "all"
   lora_r: 16
   lora_alpha: 32
   lora_dropout: 0.05
@@ -58,7 +58,17 @@ train_datasets:
 
 # Evaluation datasets
 eval_datasets:
-  - dataset_id: "base_longfact_test"
+  - dataset_id: "longfact_test_llama"
+    hf_repo: "tymciurymciu/longfact-test-split"
+    subset: "Meta_Llama_3.1_8B_Instruct"
+    split: "test"
+    max_length: 1536
+    pos_weight: 10.0
+    neg_weight: 10.0
+    default_ignore: false
+    shuffle: false
+
+  - dataset_id: "longfact_test_apertus"
     hf_repo: "tymciurymciu/longfact-test-split"
     subset: "Apertus_8B_Instruct_2509"
     split: "test"
