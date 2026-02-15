@@ -43,7 +43,7 @@ seed: 42
 # Training datasets
 train_datasets:
   - dataset_id: "longfact_train"
-    hf_repo: "tymciurymciu/longfact-test-spli"
+    hf_repo: "tymciurymciu/longfact-test-split"
     subset: "Meta_Llama_3.1_8B_Instruct"
     split: "train"
     max_length: 1536
