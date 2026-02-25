@@ -38,12 +38,16 @@ git pull
 export CUDA_VISIBLE_DEVICES=0
 uv pip install --no-deps  . --system
 
-# multiarray job setup
-CONFIGS=(our_dataset/train_config_apertus_no_lora.yaml our_dataset/train_config_apertus_kl0.5.yaml our_dataset/train_config_llama_no_lora.yaml our_dataset/train_config_llama_kl0.5.yaml)
-SELECTED_CONFIG=${CONFIGS[$SLURM_ARRAY_TASK_ID]}
+# multiarray job setup - 4 jobs
+MODELS=("apertus" "apertus" "llama" "llama")
+TRAINING=("no_lora" "lora" "no_lora" "lora")
 
-echo "Running with config: $SELECTED_CONFIG"
+CURRENT_MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
+CURRENT_TRAINING=${TRAINING[$SLURM_ARRAY_TASK_ID]}
 
-python probe/train.py --config=configs/$SELECTED_CONFIG
+echo "Running Hydra job: model=$CURRENT_MODEL training=$CURRENT_TRAINING"
+
+# Instead of passing a file path, we override the Hydra config modules
+python scripts/train_probe.py model=$CURRENT_MODEL training=$CURRENT_TRAINING dataset=our_long_form
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash

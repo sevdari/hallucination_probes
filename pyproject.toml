@@ -35,6 +35,8 @@ dependencies = [
   "accelerate>=0.20.0",
   # Experiment tracking
   "wandb>=0.15.0",
+  "hydra-core>=1.3",
+  "omegaconf>=2.3",   # Hydra depends on this, good to pin explicitly
 ]
 
 [tool.setuptools]
