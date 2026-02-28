@@ -5,7 +5,7 @@ defaults:
   - _self_
 
 probe_config:
-  probe_id: "${model.short_name}_${training.short_name}_${dataset.short_name}"
+  probe_id: "${model.short_name}_${training.short_name}_${dataset.short_name}_layer{probe_config.layer}"
   layer: 30
   load_from: null
   hf_repo_id: "tymciurymciu/hallucination-probes"
