@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --account=large-sc-2
+#SBATCH --account=infra01
 #SBATCH -p debug
-#SBATCH --time=00:40:00
+#SBATCH --time=01:00:00
 #SBATCH --job-name=build-uv-hallucination
 #SBATCH --output=log/build-uv-hallucination-%j.out
 #SBATCH --error=log/build-uv-hallucination-%j.err

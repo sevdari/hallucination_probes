@@ -48,6 +48,6 @@ CURRENT_TRAINING=${TRAINING[$SLURM_ARRAY_TASK_ID]}
 echo "Running Hydra job: model=$CURRENT_MODEL training=$CURRENT_TRAINING"
 
 # Instead of passing a file path, we override the Hydra config modules
-python scripts/train_probe.py model=$CURRENT_MODEL training=$CURRENT_TRAINING dataset=our_long_form
+python probe/train.py model=$CURRENT_MODEL training=$CURRENT_TRAINING dataset=our_long_form
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash

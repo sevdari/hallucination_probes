@@ -39,9 +39,9 @@ git pull
 uv pip install --no-deps  . --system
 uv pip install hydra-core --system
 
-CUDA_VISIBLE_DEVICES=0 python probe/train.py model=apertus training=no_lora dataset=our_long_form model.probe_layer=16 &
-CUDA_VISIBLE_DEVICES=1 python probe/train.py model=apertus training=no_lora dataset=our_long_form model.probe_layer=24 &
-CUDA_VISIBLE_DEVICES=2 python probe/train.py model=apertus training=no_lora dataset=our_long_form model.probe_layer=28 &
-CUDA_VISIBLE_DEVICES=3 python probe/train.py model=apertus training=no_lora dataset=our_long_form model.probe_layer=31
+CUDA_VISIBLE_DEVICES=0 python probe/train.py model=apertus training=no_lora dataset=our_long_form probe_config.layer=16 &
+CUDA_VISIBLE_DEVICES=1 python probe/train.py model=apertus training=no_lora dataset=our_long_form probe_config.layer=24 &
+CUDA_VISIBLE_DEVICES=2 python probe/train.py model=apertus training=no_lora dataset=our_long_form probe_config.layer=28 &
+CUDA_VISIBLE_DEVICES=3 python probe/train.py model=apertus training=no_lora dataset=our_long_form probe_config.layer=31
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash
