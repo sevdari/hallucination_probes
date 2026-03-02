@@ -18,3 +18,9 @@ value_head_probes/
 log/*
 build/*
 .vscode/launch.json
+
+clariden/log/*
+
+# hydra
+multirun/
+outputs/
