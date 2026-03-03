@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --account=large-sc-2
+#SBATCH --account=infra01
 #SBATCH -p normal
 #SBATCH --time=12:00:00
-#SBATCH --job-name=paper_reproduce
+#SBATCH --job-name=apertus-lora-comparison
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
-#SBATCH --array=0-1
+#SBATCH --array=0-3
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -30,7 +30,7 @@ fi
 cd /workspace/hallucination_probes/
 
 git pull
-git checkout  compare_models
+git checkout  transferability
 git pull
 
 
@@ -38,12 +38,16 @@ git pull
 export CUDA_VISIBLE_DEVICES=0
 uv pip install --no-deps  . --system
 
-# multiarray job setup
-CONFIGS=(train_config_apertus_no_lora_our_dataset.yaml train_config_apertus_our_dataset.yaml)
-SELECTED_CONFIG=${CONFIGS[$SLURM_ARRAY_TASK_ID]}
+# multiarray job setup - 4 jobs
+MODELS=("apertus" "apertus" "llama" "llama")
+TRAINING=("no_lora" "lora" "no_lora" "lora")
 
-echo "Running with config: $SELECTED_CONFIG"
+CURRENT_MODEL=${MODELS[$SLURM_ARRAY_TASK_ID]}
+CURRENT_TRAINING=${TRAINING[$SLURM_ARRAY_TASK_ID]}
 
-python probe/train.py --config=configs/$SELECTED_CONFIG
+echo "Running Hydra job: model=$CURRENT_MODEL training=$CURRENT_TRAINING"
+
+# Instead of passing a file path, we override the Hydra config modules
+python probe/train.py model=$CURRENT_MODEL training=$CURRENT_TRAINING dataset=our_long_form
 
 # srun --account=large-sc-2 -p normal  --time=01:00:00 --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml --pty bash

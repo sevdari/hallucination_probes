@@ -1,4 +1,6 @@
 """Training script for hallucination detection probes."""
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 import os
 import json
@@ -173,19 +175,28 @@ def main(training_config: TrainingConfig):
             token=os.environ.get("HF_WRITE_TOKEN"),
         )
 
+@hydra.main(version_base="1.3", config_path="../configs", config_name="main")
+def hydra_entry(cfg: DictConfig):
+    """
+    Hydra parses the yaml files and overrides, then passes a DictConfig here.
+    We convert it to a standard Python dictionary, then unpack it into your
+    existing TrainingConfig dataclass.
+    """
+    # 1. Convert DictConfig to a standard dictionary recursively
+    config_dict = OmegaConf.to_container(cfg, resolve=True)
+
+    # remove hydra artifacts
+    config_dict.pop("model", None)
+    config_dict.pop("training", None)
+    config_dict.pop("dataset", None)
+    
+    # 2. Instantiate your existing dataclass
+    training_config = TrainingConfig(**config_dict)
+    
+    # 3. Call your original main function
+    main(training_config)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a hallucination detection probe")
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="configs/train_config.yaml",
-        help="Path to training configuration file"
-    )
-    
-    args = parser.parse_args()
-    
-    # Load config from YAML
-    training_config = TrainingConfig(**load_yaml(args.config))
-    
-    main(training_config)
+    # Remove the argparse block entirely
+
+    hydra_entry()
