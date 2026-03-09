@@ -17,10 +17,23 @@ from utils.hooks import add_hooks
 from utils.model_utils import (
     get_model_layers,
     get_model_hidden_size,
-    setup_lora_for_layers
+    setup_lora_for_layers,
+    resolve_torch_dtype,
 )
 from utils.probe_loader import download_probe_from_hf
 from probe.attention_probe import PerTokenAttentionProbe, AttentionProbeHead
+
+
+class L2Norm(nn.Module):
+    """Per-token L2 normalization for hidden features before probe head."""
+
+    def __init__(self, eps: float = 1e-6):
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        denom = x.norm(p=2, dim=-1, keepdim=True).clamp_min(self.eps)
+        return x / denom
 
 class ValueHeadProbe(nn.Module):
     """
@@ -39,7 +52,9 @@ class ValueHeadProbe(nn.Module):
         layer_idx: Optional[int] = None,
         path: Optional[Union[str, Path]] = None,
         context_window_size: Optional[int] = 1,
-        attention_probe_n_heads: int = 4
+        attention_probe_n_heads: int = 4,
+        probe_dtype: Optional[str] = None,
+        normalize_before_head: Optional[str] = None,
     ):
         """
         Initialize the ValueHeadProbe.
@@ -53,6 +68,8 @@ class ValueHeadProbe(nn.Module):
 
         assert layer_idx or path, "Either path or layer index must be provided, otherwise we can't infer the layer where we should hook the value head to."
         
+        saved_probe_dtype = None
+        saved_norm = None
         if path:
             saved_config = json.load(open(path / "probe_config.json"))
 
@@ -61,6 +78,8 @@ class ValueHeadProbe(nn.Module):
             else:
                 # We check that if a layer_idx is provided, it matches the one given in the previously saved config
                 assert layer_idx == saved_config["layer_idx"]
+            saved_probe_dtype = saved_config.get("probe_dtype")
+            saved_norm = saved_config.get("normalize_before_head")
 
         hidden_size = get_model_hidden_size(model)
         model_layers = get_model_layers(model)
@@ -72,6 +91,20 @@ class ValueHeadProbe(nn.Module):
         self.context_window_size = context_window_size
         self.attention_probe_n_heads = attention_probe_n_heads
 
+        self.probe_dtype = probe_dtype if probe_dtype is not None else (saved_probe_dtype or "auto")
+        self.normalize_before_head = (
+            normalize_before_head if normalize_before_head is not None else (saved_norm or "none")
+        ).strip().lower()
+        head_dtype = resolve_torch_dtype(self.probe_dtype, default=model.dtype)
+
+        norm_hidden_size = hidden_size * context_window_size
+        self.pre_head_norm = self._build_pre_head_norm(
+            self.normalize_before_head,
+            hidden_size=norm_hidden_size,
+            device=model.device,
+            dtype=head_dtype,
+        )
+
         if not isinstance(model, PeftModel):
             print("WARNING: Model is not a PeftModel. Remember to add LoRA adapters if needed.")
         
@@ -81,7 +114,7 @@ class ValueHeadProbe(nn.Module):
             self.value_head, _ = ValueHeadProbe.load_head(
                 path,
                 device=model.device,
-                dtype=model.dtype
+                dtype=head_dtype,
             )
         else:
             self.value_head = PerTokenAttentionProbe(
@@ -89,7 +122,7 @@ class ValueHeadProbe(nn.Module):
                 n_heads=self.attention_probe_n_heads,
                 n_outputs=1,
                 device=model.device,
-                dtype=model.dtype
+                dtype=head_dtype,
             )
             print(f"WARNING: Using seed=42 for the initialization of the probe")
             torch.manual_seed(42)
@@ -99,6 +132,25 @@ class ValueHeadProbe(nn.Module):
         # Initialize hook state
         self._hooked_hidden_states: Optional[torch.Tensor] = None
         self._hook_fn = self._get_hook_fn()
+
+    @staticmethod
+    def _build_pre_head_norm(
+        norm_kind: str,
+        *,
+        hidden_size: int,
+        device: torch.device,
+        dtype: torch.dtype,
+    ) -> nn.Module:
+        key = (norm_kind or "none").strip().lower()
+        if key == "none":
+            return nn.Identity()
+        if key == "layernorm":
+            return nn.LayerNorm(hidden_size, device=device, dtype=dtype)
+        if key == "rmsnorm":
+            return nn.RMSNorm(hidden_size, device=device, dtype=dtype)
+        if key == "l2":
+            return L2Norm()
+        raise ValueError(f"Unsupported normalize_before_head={norm_kind!r}")
     
     def _initialize_weights(self):
         """Initialize the value head weights with small random values."""
@@ -170,6 +222,15 @@ class ValueHeadProbe(nn.Module):
         
         # Concatenate context window hidden states
         context_hidden_states = torch.cat(shifted, dim=-1)
+        context_hidden_states = self.pre_head_norm(context_hidden_states)
+
+        # Ensure head/input dtypes match when model and probe run at different precision.
+        try:
+            head_param = next(self.value_head.parameters())
+            if context_hidden_states.dtype != head_param.dtype:
+                context_hidden_states = context_hidden_states.to(head_param.dtype)
+        except StopIteration:
+            pass
 
         probe_logits: Float[Tensor, 'batch_size seq_len 1'] = self.value_head(context_hidden_states)
 
@@ -202,7 +263,10 @@ class ValueHeadProbe(nn.Module):
         probe_config = {
             "target_layer_name": self.target_module.__class__.__name__,
             "layer_idx": self.layer_idx,
-            "hidden_size": self.value_head.in_features if isinstance(self.value_head, nn.Linear) else None,
+            "hidden_size": self._probe_input_size(),
+            "attention_probe_n_heads": self.attention_probe_n_heads,
+            "probe_dtype": self.probe_dtype,
+            "normalize_before_head": self.normalize_before_head,
         }
         with open(path / "probe_config.json", 'w') as f:
             json.dump(probe_config, f, indent=4)
@@ -237,8 +301,9 @@ class ValueHeadProbe(nn.Module):
 
         hidden_size = probe_config['hidden_size']
         probe_layer_idx = probe_config['layer_idx']
+        n_heads = probe_config.get("attention_probe_n_heads", 4)
 
-        probe_head = PerTokenAttentionProbe(hidden_size, n_heads=4, n_outputs=1, device=device, dtype=dtype)
+        probe_head = PerTokenAttentionProbe(hidden_size, n_heads=n_heads, n_outputs=1, device=device, dtype=dtype)
         
         state_dict = torch.load(
             path / "probe_head.bin",
@@ -248,6 +313,13 @@ class ValueHeadProbe(nn.Module):
         probe_head.load_state_dict(state_dict)
         
         return probe_head, probe_layer_idx
+
+    def _probe_input_size(self) -> int:
+        if hasattr(self.value_head, "query_proj"):
+            return int(self.value_head.query_proj.in_features)
+        if hasattr(self.value_head, "in_features"):
+            return int(self.value_head.in_features)
+        raise ValueError("Unable to infer probe input size from value head")
 
 
 def setup_probe(
@@ -286,7 +358,13 @@ def setup_probe(
             model = PeftModel.from_pretrained(model, probe_config.probe_path)
 
         # Load existing probe (layer_idx will be inferred from previously saved config)
-        probe = ValueHeadProbe(model, path=probe_config.probe_path)
+        probe = ValueHeadProbe(
+            model,
+            path=probe_config.probe_path,
+            attention_probe_n_heads=probe_config.attention_probe_n_heads,
+            probe_dtype=probe_config.probe_dtype,
+            normalize_before_head=probe_config.normalize_before_head,
+        )
 
     else:
         # Initialize the probe from scratch
@@ -306,7 +384,9 @@ def setup_probe(
             model, 
             layer_idx=probe_config.layer,
             context_window_size=probe_config.context_window_size,
-            attention_probe_n_heads=probe_config.attention_probe_n_heads
+            attention_probe_n_heads=probe_config.attention_probe_n_heads,
+            probe_dtype=probe_config.probe_dtype,
+            normalize_before_head=probe_config.normalize_before_head,
         )
   
     return model, probe

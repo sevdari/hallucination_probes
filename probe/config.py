@@ -30,6 +30,8 @@ class ProbeConfig:
     threshold: float = 0.5  # Classification threshold
     context_window_size: int = 1  # Size of context window for the probe
     attention_probe_n_heads: int = 4  # Number of attention heads for the probe
+    probe_dtype: str = "auto"  # auto | float32 | float16 | bfloat16
+    normalize_before_head: str = "none"  # none | layernorm | rmsnorm | l2
     
     def __post_init__(self):
         """Validate configuration."""
@@ -47,6 +49,22 @@ class ProbeConfig:
         
         if (not isinstance(self.context_window_size, int) or self.context_window_size < 0):
             raise ValueError("context_window must be a positive integer.")
+
+        allowed_probe_dtypes = {"auto", "fp32", "float32", "fp16", "float16", "bf16", "bfloat16"}
+        probe_dtype_key = str(self.probe_dtype).strip().lower()
+        if probe_dtype_key not in allowed_probe_dtypes:
+            raise ValueError(
+                f"Unsupported probe_dtype={self.probe_dtype!r}. "
+                "Use one of: auto, float32, float16, bfloat16"
+            )
+
+        allowed_norms = {"none", "layernorm", "rmsnorm", "l2"}
+        norm_key = str(self.normalize_before_head).strip().lower()
+        if norm_key not in allowed_norms:
+            raise ValueError(
+                f"Unsupported normalize_before_head={self.normalize_before_head!r}. "
+                "Use one of: none, layernorm, rmsnorm, l2"
+            )
 
         if isinstance(self.lora_layers, str):
             if self.lora_layers == 'all':
@@ -99,6 +117,7 @@ class TrainingConfig:
     evaluation_strategy: str = "no"  # "steps", "epoch", or "no"
     logging_steps: int = 10
     seed: int = 42
+    model_dtype: str = "auto"  # auto | float32 | float16 | bfloat16
     
     # Dataset configuration
     train_datasets: List[dict] = field(default_factory=list)
@@ -144,6 +163,14 @@ class TrainingConfig:
             value = getattr(self, field_name)
             if value is not None and isinstance(value, str):
                 setattr(self, field_name, float(value))
+
+        allowed_model_dtypes = {"auto", "fp32", "float32", "fp16", "float16", "bf16", "bfloat16"}
+        model_dtype_key = str(self.model_dtype).strip().lower()
+        if model_dtype_key not in allowed_model_dtypes:
+            raise ValueError(
+                f"Unsupported model_dtype={self.model_dtype!r}. "
+                "Use one of: auto, float32, float16, bfloat16"
+            )
 
 
 @dataclass

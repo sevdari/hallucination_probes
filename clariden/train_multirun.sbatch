@@ -2,11 +2,11 @@
 #SBATCH --account=infra01
 #SBATCH -p normal
 #SBATCH --time=12:00:00
-#SBATCH --job-name=even-layer-seeds
+#SBATCH --job-name=apertus-stability-sweep
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
-# 48 total runs / 4 GPUs per node = 12 array tasks (0-11)
-#SBATCH --array=0-11
+# 72 total runs / 4 GPUs per node = 18 array tasks (0-17)
+#SBATCH --array=0-17
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -36,27 +36,33 @@ uv pip install hydra-core --system
 
 mkdir -p log
 
-# Define search space
-MODELS=(llama apertus)
-EVEN_LAYERS=(4 10 16 20 24 26 28 30)
+# Define search space (Apertus only, two probe variants)
+MODEL="apertus"
+EVEN_LAYERS=(10 20 26 30)
 SEEDS=(42 43 44)
+LRS=(3e-4 1e-4 3e-5)
+VARIANTS=(ln_fp32 fp32_only)
 
 # Build a flat list of all combinations
-RUN_MODELS=()
 RUN_LAYERS=()
 RUN_SEEDS=()
+RUN_LRS=()
+RUN_VARIANTS=()
 
-for m in "${MODELS[@]}"; do
+for v in "${VARIANTS[@]}"; do
   for l in "${EVEN_LAYERS[@]}"; do
     for s in "${SEEDS[@]}"; do
-      RUN_MODELS+=("$m")
-      RUN_LAYERS+=("$l")
-      RUN_SEEDS+=("$s")
+      for lr in "${LRS[@]}"; do
+        RUN_VARIANTS+=("$v")
+        RUN_LAYERS+=("$l")
+        RUN_SEEDS+=("$s")
+        RUN_LRS+=("$lr")
+      done
     done
   done
 done
 
-TOTAL=${#RUN_MODELS[@]}          # Will be 8 * 3 * 2 = 48
+TOTAL=${#RUN_LAYERS[@]}          # Will be 2 * 4 * 3 * 3 = 72
 TASKS_PER_JOB=4                  # 4 GPUs per SLURM job
 START=$((SLURM_ARRAY_TASK_ID * TASKS_PER_JOB))
 
@@ -69,11 +75,22 @@ for local_gpu in 0 1 2 3; do
     break
   fi
 
-  MODEL="${RUN_MODELS[$idx]}"
+  VARIANT="${RUN_VARIANTS[$idx]}"
   LAYER="${RUN_LAYERS[$idx]}"
   SEED="${RUN_SEEDS[$idx]}"
-  
-  echo "Launching Run $idx/$TOTAL -> Model: $MODEL | Layer: $LAYER | Seed: $SEED on GPU: $local_gpu"
+  LR="${RUN_LRS[$idx]}"
+
+  if [[ "$VARIANT" == "ln_fp32" ]]; then
+    NORM="layernorm"
+  else
+    NORM="none"
+  fi
+
+  LR_TAG="${LR//./p}"
+  LR_TAG="${LR_TAG//-/m}"
+  PROBE_ID="apertus_no_lora_${VARIANT}_layer${LAYER}_seed${SEED}_lr${LR_TAG}"
+
+  echo "Launching Run $idx/$TOTAL -> Model: $MODEL | Variant: $VARIANT | Layer: $LAYER | Seed: $SEED | LR: $LR | GPU: $local_gpu"
 
   # Override probe_id on the fly so runs don't overwrite each other in output dirs / wandb
   CUDA_VISIBLE_DEVICES=$local_gpu python probe/train.py \
@@ -81,8 +98,12 @@ for local_gpu in 0 1 2 3; do
     training=no_lora \
     dataset=our_long_form \
     probe_config.layer=$LAYER \
+    model_dtype=bfloat16 \
+    probe_config.probe_dtype=float32 \
+    probe_config.normalize_before_head=$NORM \
+    probe_head_lr=$LR \
     seed=$SEED \
-    "probe_config.probe_id=\${model.short_name}_no_lora_long_form_layer${LAYER}_seed${SEED}" &
+    "probe_config.probe_id=${PROBE_ID}" &
 done
 
 # Wait for all 4 background tasks on this node to finish

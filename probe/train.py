@@ -17,7 +17,7 @@ from transformers import TrainingArguments
 from dotenv import load_dotenv
 
 from utils.file_utils import save_jsonl, save_json, load_yaml
-from utils.model_utils import load_model_and_tokenizer, print_trainable_parameters
+from utils.model_utils import load_model_and_tokenizer, print_trainable_parameters, resolve_torch_dtype
 from utils.probe_loader import upload_probe_to_hf
 
 from probe.dataset import TokenizedProbingDataset, create_probing_dataset, tokenized_probing_collate_fn
@@ -44,7 +44,8 @@ def main(training_config: TrainingConfig):
     # Load model and tokenizer
     print(f"Loading model: {training_config.probe_config.model_name}")
     model, tokenizer = load_model_and_tokenizer(
-        training_config.probe_config.model_name
+        training_config.probe_config.model_name,
+        torch_dtype=resolve_torch_dtype(training_config.model_dtype),
     )
 
     if hasattr(model, 'config'):

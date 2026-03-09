@@ -8,6 +8,33 @@ from peft import PeftModel, LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, PreTrainedModel
 
 
+def resolve_torch_dtype(
+    dtype_name: Optional[str],
+    *,
+    default: Optional[torch.dtype] = None,
+) -> Optional[torch.dtype]:
+    """Resolve config dtype name to a torch dtype.
+
+    Supported values: auto, fp32/float32, fp16/float16, bf16/bfloat16.
+    """
+    if dtype_name is None:
+        return default
+
+    key = str(dtype_name).strip().lower()
+    if key in {"", "auto", "default", "model"}:
+        return default
+    if key in {"fp32", "float32", "torch.float32"}:
+        return torch.float32
+    if key in {"fp16", "float16", "torch.float16"}:
+        return torch.float16
+    if key in {"bf16", "bfloat16", "torch.bfloat16"}:
+        return torch.bfloat16
+
+    raise ValueError(
+        f"Unsupported dtype '{dtype_name}'. Use one of: auto, float32, float16, bfloat16."
+    )
+
+
 def get_device() -> torch.device:
     """Get the best available device (CUDA, MPS, or CPU)."""
     if torch.cuda.is_available():
