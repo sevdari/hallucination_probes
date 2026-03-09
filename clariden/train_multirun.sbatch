@@ -3,9 +3,8 @@
 #SBATCH -p normal
 #SBATCH --time=3:00:00
 #SBATCH --job-name=apertus-stability-sweep
-#SBATCH --output=log/%x-%j_%a.out
-#SBATCH --error=log/%x-%j_%a.err
-# 72 total runs / 4 GPUs per node = 18 array tasks (0-17)
+#SBATCH --output=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.out
+#SBATCH --error=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.err
 #SBATCH --array=0-17
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 

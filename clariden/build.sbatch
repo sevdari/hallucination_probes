@@ -3,8 +3,8 @@
 #SBATCH -p debug
 #SBATCH --time=01:00:00
 #SBATCH --job-name=build-uv-hallucination
-#SBATCH --output=log/build-uv-hallucination-%j.out
-#SBATCH --error=log/build-uv-hallucination-%j.err
+#SBATCH --output=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/build-uv-hallucination-%j.out
+#SBATCH --error=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/build-uv-hallucination-%j.err
 
 set -euo pipefail
 
