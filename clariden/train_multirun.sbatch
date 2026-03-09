@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=infra01
 #SBATCH -p normal
-#SBATCH --time=12:00:00
+#SBATCH --time=3:00:00
 #SBATCH --job-name=apertus-stability-sweep
 #SBATCH --output=log/%x-%j_%a.out
 #SBATCH --error=log/%x-%j_%a.err
@@ -28,7 +28,7 @@ fi
 cd /workspace/hallucination_probes/
 
 git pull
-git checkout transferability
+git checkout improve_stability
 git pull
 
 uv pip install --no-deps . --system
