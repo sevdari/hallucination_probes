@@ -222,6 +222,19 @@ class ValueHeadProbe(nn.Module):
         
         # Concatenate context window hidden states
         context_hidden_states = torch.cat(shifted, dim=-1)
+
+        # Keep norm input dtype aligned with norm params/buffers (e.g., fp32 LayerNorm).
+        norm_dtype = None
+        for tensor in self.pre_head_norm.parameters():
+            norm_dtype = tensor.dtype
+            break
+        if norm_dtype is None:
+            for tensor in self.pre_head_norm.buffers():
+                norm_dtype = tensor.dtype
+                break
+        if norm_dtype is not None and context_hidden_states.dtype != norm_dtype:
+            context_hidden_states = context_hidden_states.to(norm_dtype)
+
         context_hidden_states = self.pre_head_norm(context_hidden_states)
 
         # Ensure head/input dtypes match when model and probe run at different precision.

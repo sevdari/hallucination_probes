@@ -3,6 +3,7 @@
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional, Tuple, Union
 
@@ -74,7 +75,9 @@ def upload_probe_to_hf(
     hf_repo_subfolder_prefix: str = "",
     token: Optional[str] = None,
     private: bool = False,
-    commit_message: str = "Upload probe model"
+    commit_message: str = "Upload probe model",
+    max_retries: int = 5,
+    retry_delay_seconds: float = 2.0,
 ) -> str:
     """
     Uploads a probe (LoRA adapters + value head) to HuggingFace Hub.
@@ -118,14 +121,29 @@ def upload_probe_to_hf(
     )
     
     print(f"Uploading folder {local_folder} to {repo_id}...")
-    api.upload_folder(
-        folder_path=str(local_folder),
-        repo_id=repo_id,
-        repo_type="model",
-        path_in_repo=path_in_repo,
-        commit_message=commit_message,
-        token=token,
-    )
+    for attempt in range(1, max_retries + 1):
+        try:
+            api.upload_folder(
+                folder_path=str(local_folder),
+                repo_id=repo_id,
+                repo_type="model",
+                path_in_repo=path_in_repo,
+                commit_message=commit_message,
+                token=token,
+            )
+            break
+        except Exception as exc:
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            is_precondition_failed = status_code == 412
+            if is_precondition_failed and attempt < max_retries:
+                sleep_seconds = retry_delay_seconds * attempt
+                print(
+                    f"HF upload conflict (HTTP 412). Retrying {attempt}/{max_retries - 1} "
+                    f"after {sleep_seconds:.1f}s..."
+                )
+                time.sleep(sleep_seconds)
+                continue
+            raise
     
     # Return the URL
     url = f"https://huggingface.co/{repo_id}"

@@ -5,10 +5,17 @@ from omegaconf import DictConfig, OmegaConf
 import os
 import json
 import atexit
+import sys
 from pathlib import Path
 from typing import List
 from dataclasses import asdict
 import argparse
+
+# When running as `python probe/train.py`, prefer local repo modules over any
+# previously installed `probe` package from site-packages.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 import torch
 import wandb
@@ -170,11 +177,15 @@ def main(training_config: TrainingConfig):
 
     if training_config.upload_to_hf:
         print(f"Uploading probe to HuggingFace Hub...")
-        upload_probe_to_hf(
-            repo_id=training_config.probe_config.hf_repo_id,
-            probe_id=training_config.probe_config.probe_id,
-            token=os.environ.get("HF_WRITE_TOKEN"),
-        )
+        try:
+            upload_probe_to_hf(
+                repo_id=training_config.probe_config.hf_repo_id,
+                probe_id=training_config.probe_config.probe_id,
+                token=os.environ.get("HF_WRITE_TOKEN"),
+            )
+        except Exception as exc:
+            print(f"WARNING: Upload to HuggingFace failed: {exc}")
+            print("WARNING: Training completed and artifacts remain available locally.")
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="main")
 def hydra_entry(cfg: DictConfig):
