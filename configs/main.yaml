@@ -11,6 +11,8 @@ probe_config:
   hf_repo_id: "tymciurymciu/hallucination-probes"
   threshold: 0.5
   model_name: "${model.probe_config.model_name}"
+  probe_dtype: auto
+  normalize_before_head: none
 
 wandb_project: "hallucination-probes"
 upload_to_hf: true
@@ -18,7 +20,6 @@ save_evaluation_metrics: true
 save_roc_curves: true
 dump_raw_eval_results: true
 model_dtype: auto
-normalize_before_head: false
 
 # Shared Training hyperparameters
 per_device_train_batch_size: 8 
