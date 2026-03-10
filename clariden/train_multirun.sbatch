@@ -2,10 +2,10 @@
 #SBATCH --account=infra01
 #SBATCH -p normal
 #SBATCH --time=3:00:00
-#SBATCH --job-name=apertus-stability-sweep
+#SBATCH --job-name=hallucination-probe-ablation
 #SBATCH --output=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.out
 #SBATCH --error=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.err
-#SBATCH --array=0-17
+#SBATCH --array=0-47
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -39,8 +39,8 @@ mkdir -p log
 MODEL="apertus"
 EVEN_LAYERS=(10 20 26 30)
 SEEDS=(42 43 44)
-LRS=(3e-4 1e-4 3e-5)
-VARIANTS=(ln_fp32 fp32_only)
+LRS=(1e-3 3e-4 1e-4 3e-5)
+VARIANTS=(ln_fp32 fp32_only ln_bf16 bf16_only)
 
 # Build a flat list of all combinations
 RUN_LAYERS=()
@@ -61,7 +61,7 @@ for v in "${VARIANTS[@]}"; do
   done
 done
 
-TOTAL=${#RUN_LAYERS[@]}          # Will be 2 * 4 * 3 * 3 = 72
+TOTAL=${#RUN_LAYERS[@]}          # Will be 4 * 4 * 3 * 4 = 192 runs total
 TASKS_PER_JOB=4                  # 4 GPUs per SLURM job
 START=$((SLURM_ARRAY_TASK_ID * TASKS_PER_JOB))
 
@@ -79,10 +79,16 @@ for local_gpu in 0 1 2 3; do
   SEED="${RUN_SEEDS[$idx]}"
   LR="${RUN_LRS[$idx]}"
 
-  if [[ "$VARIANT" == "ln_fp32" ]]; then
+  if [[ "$VARIANT" == "ln_fp32" || "$VARIANT" == "ln_bf16" ]]; then
     NORM="layernorm"
   else
     NORM="none"
+  fi
+
+  if [[ "$VARIANT" == "ln_bf16" || "$VARIANT" == "bf16_only" ]]; then
+    PROBE_DTYPE="bfloat16"
+  else
+    PROBE_DTYPE="float32"
   fi
 
   LR_TAG="${LR//./p}"
@@ -98,7 +104,7 @@ for local_gpu in 0 1 2 3; do
     dataset=our_long_form \
     probe_config.layer=$LAYER \
     model_dtype=bfloat16 \
-    probe_config.probe_dtype=float32 \
+    probe_config.probe_dtype=$PROBE_DTYPE \
     probe_config.normalize_before_head=$NORM \
     probe_head_lr=$LR \
     seed=$SEED \
