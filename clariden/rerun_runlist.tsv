@@ -1,0 +1,15 @@
+8	apertus	ln_fp32	10	44	1e-3	layernorm	float32	apertus_no_lora_ln_fp32_layer10_seed44_lr1em3
+56	apertus	fp32_only	10	44	1e-3	none	float32	apertus_no_lora_fp32_only_layer10_seed44_lr1em3
+84	apertus	fp32_only	30	42	1e-3	none	float32	apertus_no_lora_fp32_only_layer30_seed42_lr1em3
+96	apertus	ln_bf16	10	42	1e-3	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer10_seed42_lr1em3
+97	apertus	ln_bf16	10	42	3e-4	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer10_seed42_lr3em4
+98	apertus	ln_bf16	10	42	1e-4	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer10_seed42_lr1em4
+99	apertus	ln_bf16	10	42	3e-5	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer10_seed42_lr3em5
+140	apertus	ln_bf16	30	44	1e-3	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer30_seed44_lr1em3
+141	apertus	ln_bf16	30	44	3e-4	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer30_seed44_lr3em4
+142	apertus	ln_bf16	30	44	1e-4	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer30_seed44_lr1em4
+143	apertus	ln_bf16	30	44	3e-5	layernorm	bfloat16	apertus_no_lora_ln_bf16_layer30_seed44_lr3em5
+156	apertus	bf16_only	20	42	1e-3	none	bfloat16	apertus_no_lora_bf16_only_layer20_seed42_lr1em3
+157	apertus	bf16_only	20	42	3e-4	none	bfloat16	apertus_no_lora_bf16_only_layer20_seed42_lr3em4
+158	apertus	bf16_only	20	42	1e-4	none	bfloat16	apertus_no_lora_bf16_only_layer20_seed42_lr1em4
+159	apertus	bf16_only	20	42	3e-5	none	bfloat16	apertus_no_lora_bf16_only_layer20_seed42_lr3em5
