@@ -5,7 +5,7 @@
 #SBATCH --job-name=hallucination-probe-ablation
 #SBATCH --output=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.out
 #SBATCH --error=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.err
-#SBATCH --array=0-47
+#SBATCH --array=0-23
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -40,7 +40,8 @@ MODEL="apertus"
 EVEN_LAYERS=(10 20 26 30)
 SEEDS=(42 43 44)
 LRS=(1e-3 3e-4 1e-4 3e-5)
-VARIANTS=(ln_fp32 fp32_only ln_bf16 bf16_only)
+# VARIANTS=(ln_fp32 fp32_only ln_bf16 bf16_only)
+VARIANTS=(ln_fp32 fp32_only)
 
 # Build a flat list of all combinations
 RUN_LAYERS=()

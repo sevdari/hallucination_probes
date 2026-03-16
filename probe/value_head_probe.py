@@ -131,7 +131,7 @@ class ValueHeadProbe(nn.Module):
             print("WARNING: Using seed=42 for the initialization of the probe")
             torch.manual_seed(42)
         else:  # "linear"
-            self.value_head = nn.Linear(input_size, 1, device=model.device, dtype=model.dtype)
+            self.value_head = nn.Linear(input_size, 1, device=model.device, dtype=head_dtype)
             print("WARNING: Using seed=42 for the initialization of the probe")
             torch.manual_seed(42)
             self._initialize_weights()
