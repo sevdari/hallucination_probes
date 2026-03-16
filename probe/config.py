@@ -65,6 +65,7 @@ class ProbeConfig:
             raise ValueError(
                 f"Unsupported normalize_before_head={self.normalize_before_head!r}. "
                 "Use one of: none, layernorm, rmsnorm, l2"
+            )
         if str(self.probe_head_type).strip().lower() not in {"linear", "attention"}:
             raise ValueError(
                 f"Unsupported probe_head_type={self.probe_head_type!r}. Use 'linear' or 'attention'."
