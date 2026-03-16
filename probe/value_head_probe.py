@@ -55,6 +55,7 @@ class ValueHeadProbe(nn.Module):
         attention_probe_n_heads: int = 4,
         probe_dtype: Optional[str] = None,
         normalize_before_head: Optional[str] = None,
+        probe_head_type: str = "linear",
     ):
         """
         Initialize the ValueHeadProbe.
@@ -80,6 +81,7 @@ class ValueHeadProbe(nn.Module):
                 assert layer_idx == saved_config["layer_idx"]
             saved_probe_dtype = saved_config.get("probe_dtype")
             saved_norm = saved_config.get("normalize_before_head")
+            probe_head_type = saved_config.get("probe_head_type", probe_head_type)
 
         hidden_size = get_model_hidden_size(model)
         model_layers = get_model_layers(model)
@@ -90,6 +92,7 @@ class ValueHeadProbe(nn.Module):
         self.target_layer_name = self.target_module.__class__.__name__
         self.context_window_size = context_window_size
         self.attention_probe_n_heads = attention_probe_n_heads
+        self.probe_head_type = str(probe_head_type).strip().lower()
 
         self.probe_dtype = probe_dtype if probe_dtype is not None else (saved_probe_dtype or "auto")
         self.normalize_before_head = (
@@ -107,8 +110,9 @@ class ValueHeadProbe(nn.Module):
 
         if not isinstance(model, PeftModel):
             print("WARNING: Model is not a PeftModel. Remember to add LoRA adapters if needed.")
-        
-        # Initialize the value head (linear layer)
+
+        # Initialize the value head
+        input_size = hidden_size * context_window_size
         if path:
             # Load pre-trained weights if path is provided
             self.value_head, _ = ValueHeadProbe.load_head(
@@ -116,18 +120,21 @@ class ValueHeadProbe(nn.Module):
                 device=model.device,
                 dtype=head_dtype,
             )
-        else:
+        elif self.probe_head_type == "attention":
             self.value_head = PerTokenAttentionProbe(
-                hidden_size * context_window_size,
+                input_size,
                 n_heads=self.attention_probe_n_heads,
                 n_outputs=1,
                 device=model.device,
                 dtype=head_dtype,
             )
-            print(f"WARNING: Using seed=42 for the initialization of the probe")
+            print("WARNING: Using seed=42 for the initialization of the probe")
             torch.manual_seed(42)
-            if isinstance(self.value_head, nn.Linear):
-                self._initialize_weights()
+        else:  # "linear"
+            self.value_head = nn.Linear(input_size, 1, device=model.device, dtype=model.dtype)
+            print("WARNING: Using seed=42 for the initialization of the probe")
+            torch.manual_seed(42)
+            self._initialize_weights()
         
         # Initialize hook state
         self._hooked_hidden_states: Optional[torch.Tensor] = None
@@ -273,13 +280,22 @@ class ValueHeadProbe(nn.Module):
         )
         
         # Save configuration
+        if isinstance(self.value_head, nn.Linear):
+            hidden_size = self.value_head.in_features
+        elif hasattr(self.value_head, "query_proj"):  # PerTokenAttentionProbe
+            hidden_size = self.value_head.query_proj.in_features
+        else:
+            hidden_size = None
+
         probe_config = {
             "target_layer_name": self.target_module.__class__.__name__,
             "layer_idx": self.layer_idx,
-            "hidden_size": self._probe_input_size(),
             "attention_probe_n_heads": self.attention_probe_n_heads,
             "probe_dtype": self.probe_dtype,
             "normalize_before_head": self.normalize_before_head,
+            "hidden_size": hidden_size,
+            "probe_head_type": self.probe_head_type,
+            "attention_probe_n_heads": self.attention_probe_n_heads,
         }
         with open(path / "probe_config.json", 'w') as f:
             json.dump(probe_config, f, indent=4)
@@ -314,9 +330,13 @@ class ValueHeadProbe(nn.Module):
 
         hidden_size = probe_config['hidden_size']
         probe_layer_idx = probe_config['layer_idx']
+        head_type = probe_config.get("probe_head_type", "attention")  # old saves default to attention
         n_heads = probe_config.get("attention_probe_n_heads", 4)
 
-        probe_head = PerTokenAttentionProbe(hidden_size, n_heads=n_heads, n_outputs=1, device=device, dtype=dtype)
+        if head_type == "attention":
+            probe_head = PerTokenAttentionProbe(hidden_size, n_heads=n_heads, n_outputs=1, device=device, dtype=dtype)
+        else:
+            probe_head = nn.Linear(hidden_size, 1, device=device, dtype=dtype)
         
         state_dict = torch.load(
             path / "probe_head.bin",
@@ -394,12 +414,13 @@ def setup_probe(
         # Initialize new probe with specified layer
 
         probe = ValueHeadProbe(
-            model, 
+            model,
             layer_idx=probe_config.layer,
             context_window_size=probe_config.context_window_size,
             attention_probe_n_heads=probe_config.attention_probe_n_heads,
             probe_dtype=probe_config.probe_dtype,
             normalize_before_head=probe_config.normalize_before_head,
+            probe_head_type=probe_config.probe_head_type,
         )
   
     return model, probe

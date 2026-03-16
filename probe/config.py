@@ -29,10 +29,11 @@ class ProbeConfig:
     
     threshold: float = 0.5  # Classification threshold
     context_window_size: int = 1  # Size of context window for the probe
-    attention_probe_n_heads: int = 4  # Number of attention heads for the probe
     probe_dtype: str = "auto"  # auto | float32 | float16 | bfloat16
     normalize_before_head: str = "none"  # none | layernorm | rmsnorm | l2
-    
+    attention_probe_n_heads: int = 4  # Number of attention heads for the probe (only used when probe_head_type="attention")
+    probe_head_type: str = "linear"  # linear | attention
+
     def __post_init__(self):
         """Validate configuration."""
         self.probe_path = LOCAL_PROBES_DIR / self.probe_id
@@ -64,6 +65,9 @@ class ProbeConfig:
             raise ValueError(
                 f"Unsupported normalize_before_head={self.normalize_before_head!r}. "
                 "Use one of: none, layernorm, rmsnorm, l2"
+        if str(self.probe_head_type).strip().lower() not in {"linear", "attention"}:
+            raise ValueError(
+                f"Unsupported probe_head_type={self.probe_head_type!r}. Use 'linear' or 'attention'."
             )
 
         if isinstance(self.lora_layers, str):
