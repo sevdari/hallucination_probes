@@ -12,7 +12,7 @@ probe_config:
   lora_dropout: 0.05
 
   load_from: null
-  hf_repo_id: "tymciurymciu/hallucination-probes"
+  hf_repo_id: "tkwiecinski/hallucination-probes"
 
   threshold: 0.5
 
@@ -37,13 +37,13 @@ lora_lr: 1e-4
 enable_gradient_checkpointing: true
 gradient_accumulation_steps: 1
 max_grad_norm: 1.0
-logging_steps: 10
+logging_steps: 50
 seed: 42
 
 # Training datasets
 train_datasets:
   - dataset_id: "longfact_train"
-    hf_repo: "tymciurymciu/longfact-test-split"
+    hf_repo: "tkwiecinski/longfact-test-split"
     subset: "Apertus_8B_Instruct_2509"
     split: "train"
     max_length: 1536
@@ -59,7 +59,7 @@ train_datasets:
 # Evaluation datasets
 eval_datasets:
   - dataset_id: "longfact_test_llama"
-    hf_repo: "tymciurymciu/longfact-test-split"
+    hf_repo: "tkwiecinski/longfact-test-split"
     subset: "Meta_Llama_3.1_8B_Instruct"
     split: "test"
     max_length: 1536
@@ -69,7 +69,7 @@ eval_datasets:
     shuffle: false
 
   - dataset_id: "longfact_test_apertus"
-    hf_repo: "tymciurymciu/longfact-test-split"
+    hf_repo: "tkwiecinski/longfact-test-split"
     subset: "Apertus_8B_Instruct_2509"
     split: "test"
     max_length: 1536
