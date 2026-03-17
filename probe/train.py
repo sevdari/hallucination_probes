@@ -67,7 +67,7 @@ def main(training_config: TrainingConfig):
             pass
     
     print(f"Setting up probe: {training_config.probe_config.probe_id}")
-    model, probe = setup_probe(model, training_config.probe_config)
+    model, probe = setup_probe(model, training_config.probe_config, seed=training_config.seed)
 
     print_trainable_parameters(probe)
 

@@ -56,6 +56,7 @@ class ValueHeadProbe(nn.Module):
         probe_dtype: Optional[str] = None,
         normalize_before_head: Optional[str] = None,
         probe_head_type: str = "linear",
+        seed: int = 42,
     ):
         """
         Initialize the ValueHeadProbe.
@@ -121,6 +122,7 @@ class ValueHeadProbe(nn.Module):
                 dtype=head_dtype,
             )
         elif self.probe_head_type == "attention":
+            torch.manual_seed(seed)
             self.value_head = PerTokenAttentionProbe(
                 input_size,
                 n_heads=self.attention_probe_n_heads,
@@ -128,12 +130,9 @@ class ValueHeadProbe(nn.Module):
                 device=model.device,
                 dtype=head_dtype,
             )
-            print("WARNING: Using seed=42 for the initialization of the probe")
-            torch.manual_seed(42)
         else:  # "linear"
+            torch.manual_seed(seed)
             self.value_head = nn.Linear(input_size, 1, device=model.device, dtype=head_dtype)
-            print("WARNING: Using seed=42 for the initialization of the probe")
-            torch.manual_seed(42)
             self._initialize_weights()
         
         # Initialize hook state
@@ -357,7 +356,8 @@ class ValueHeadProbe(nn.Module):
 
 def setup_probe(
     model: PreTrainedModel,
-    probe_config: 'ProbeConfig'
+    probe_config: 'ProbeConfig',
+    seed: int = 42,
 ) -> Tuple[PreTrainedModel, ValueHeadProbe]:
     """
     Set up a probe with the given configuration.
@@ -421,6 +421,7 @@ def setup_probe(
             probe_dtype=probe_config.probe_dtype,
             normalize_before_head=probe_config.normalize_before_head,
             probe_head_type=probe_config.probe_head_type,
+            seed=seed,
         )
   
     return model, probe
