@@ -29,10 +29,10 @@ Local test example
 from __future__ import annotations
 
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -111,6 +111,7 @@ def run_eval(args: argparse.Namespace) -> None:
     )
     from probe.evaluate import evaluate_probe
     from probe.value_head_probe import setup_probe
+    from transformers import PreTrainedModel
     from utils.model_utils import load_model_and_tokenizer, resolve_torch_dtype
 
     tags = [t.strip() for t in args.wandb_tags.split(",") if t.strip()]
@@ -130,55 +131,57 @@ def run_eval(args: argparse.Namespace) -> None:
         },
     )
 
-    probe_config = ProbeConfig(
-        probe_id=args.probe_id,
-        model_name=MODEL_NAMES[args.model],
-        layer=args.layer,
-        probe_dtype=args.probe_dtype,
-        normalize_before_head=args.norm,
-        lora_layers=args.lora_layers,
-        load_from="disk",
-    )
-
-    print(f"[run_probe] Loading model: {probe_config.model_name}")
-    model, tokenizer = load_model_and_tokenizer(
-        probe_config.model_name,
-        torch_dtype=resolve_torch_dtype(args.model_dtype),
-    )
-
-    print(f"[run_probe] Loading probe from disk: {probe_config.probe_path}")
-    model, probe = setup_probe(model, probe_config, seed=args.seed)
-
-    all_metrics: dict = {}
-    for ds_cfg_dict in EVAL_DATASETS:
-        ds_cfg = TokenizedProbingDatasetConfig(**ds_cfg_dict)
-        print(f"\n[run_probe] Evaluating on {ds_cfg.dataset_id} ...")
-        dataset = create_probing_dataset(ds_cfg, tokenizer)
-        print(f"  Dataset size: {len(dataset)} samples")
-
-        dataloader = DataLoader(
-            dataset,
-            batch_size=args.per_device_eval_batch_size,
-            collate_fn=tokenized_probing_collate_fn,
-            shuffle=False,
+    try:
+        probe_config = ProbeConfig(
+            probe_id=args.probe_id,
+            model_name=MODEL_NAMES[args.model],
+            layer=args.layer,
+            probe_dtype=args.probe_dtype,
+            normalize_before_head=args.norm,
+            lora_layers=args.lora_layers,
+            load_from="disk",
         )
 
-        metrics = evaluate_probe(
-            probe,
-            dataloader,
-            threshold=probe_config.threshold,
-            metric_key_prefix=ds_cfg.dataset_id,
-            verbose=True,
+        print(f"[run_probe] Loading model: {probe_config.model_name}")
+        model, tokenizer = load_model_and_tokenizer(
+            probe_config.model_name,
+            torch_dtype=resolve_torch_dtype(args.model_dtype),
         )
-        all_metrics.update(metrics)
 
-    # Log with "train/" prefix to match what HF Trainer's WandbCallback emits
-    # (rewrite_logs() prepends "train/" to non-eval keys).
-    # That lets the notebook's summary.get("train/longfact_test_*/all_auc") work
-    # without any changes.
-    wandb.log({f"train/{k}": v for k, v in all_metrics.items()})
-    wandb.finish()
-    print("[run_probe] Evaluation complete.")
+        print(f"[run_probe] Loading probe from disk: {probe_config.probe_path}")
+        model, probe = setup_probe(cast(PreTrainedModel, model), probe_config, seed=args.seed)
+
+        all_metrics: dict = {}
+        for ds_cfg_dict in EVAL_DATASETS:
+            ds_cfg = TokenizedProbingDatasetConfig(**ds_cfg_dict)
+            print(f"\n[run_probe] Evaluating on {ds_cfg.dataset_id} ...")
+            dataset = create_probing_dataset(ds_cfg, tokenizer)
+            print(f"  Dataset size: {len(dataset)} samples")
+
+            dataloader = DataLoader(
+                dataset,
+                batch_size=args.per_device_eval_batch_size,
+                collate_fn=tokenized_probing_collate_fn,
+                shuffle=False,
+            )
+
+            metrics = evaluate_probe(
+                probe,
+                dataloader,
+                threshold=probe_config.threshold,
+                metric_key_prefix=ds_cfg.dataset_id,
+                verbose=True,
+            )
+            all_metrics.update(metrics)
+
+        # Log with "train/" prefix to match what HF Trainer's WandbCallback emits
+        # (rewrite_logs() prepends "train/" to non-eval keys).
+        # That lets the notebook's summary.get("train/longfact_test_*/all_auc") work
+        # without any changes.
+        wandb.log({f"train/{k}": v for k, v in all_metrics.items()})
+        print("[run_probe] Evaluation complete.")
+    finally:
+        wandb.finish()
 
 
 # ---------------------------------------------------------------------------
@@ -187,8 +190,6 @@ def run_eval(args: argparse.Namespace) -> None:
 
 def run_train(args: argparse.Namespace) -> None:
     """Delegate to probe/train.py via Hydra subprocess."""
-    # Build tidy dtype short tag for wandb_tags
-    dtype_short = "fp32" if "32" in args.probe_dtype else "bf16"
     cmd = [
         sys.executable, "-u",
         str(REPO_ROOT / "probe" / "train.py"),
@@ -205,7 +206,7 @@ def run_train(args: argparse.Namespace) -> None:
         f"probe_config.probe_id={args.probe_id}",
         f"wandb_tags=[{args.wandb_tags}]",
     ]
-    print(f"[run_probe] Checkpoint not found — launching training:")
+    print("[run_probe] Checkpoint not found — launching training:")
     print("  " + " ".join(cmd))
     subprocess.run(cmd, check=True, cwd=str(REPO_ROOT))
 
@@ -219,12 +220,22 @@ def main() -> None:
 
     from utils.probe_loader import LOCAL_PROBES_DIR
     checkpoint = LOCAL_PROBES_DIR / args.probe_id / "probe_head.bin"
+    adapter_cfg = LOCAL_PROBES_DIR / args.probe_id / "adapter_config.json"
 
-    if checkpoint.exists():
+    needs_lora_adapter = str(args.lora_layers).strip().lower() != "none"
+    has_minimal_checkpoint = checkpoint.exists() and (adapter_cfg.exists() or not needs_lora_adapter)
+
+    if has_minimal_checkpoint:
         print(f"[run_probe] Checkpoint found at {checkpoint} → running evaluation.")
         run_eval(args)
     else:
-        print(f"[run_probe] Checkpoint not found at {checkpoint} → running training.")
+        if not checkpoint.exists():
+            reason = f"missing {checkpoint.name}"
+        elif needs_lora_adapter and not adapter_cfg.exists():
+            reason = f"missing {adapter_cfg.name} for LoRA run"
+        else:
+            reason = "incomplete checkpoint"
+        print(f"[run_probe] Checkpoint incomplete ({reason}) → running training.")
         run_train(args)
 
 
