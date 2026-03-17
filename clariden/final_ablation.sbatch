@@ -5,7 +5,7 @@
 #SBATCH --job-name=probe-seed-ablation
 #SBATCH --output=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.out
 #SBATCH --error=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.err
-#SBATCH --array=0-11
+#SBATCH --array=0-23
 #SBATCH --environment=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/clariden/env.toml
 
 set -euo pipefail
@@ -33,32 +33,35 @@ uv pip install hydra-core --system
 mkdir -p log
 
 # Fixed hyperparameters
-MODEL="apertus"
 LR="3e-4"
 PROBE_DTYPE="float32"
 
-# 2x2 grid: {noLN, LN} x {noLoRA, LoRA} — all fp32
-# Naming: <lora>_<norm>
+# 2 models x 2x2 grid: {noLN, LN} x {noLoRA, LoRA} — all fp32
+MODELS=(apertus llama)
 VARIANTS=(fp32_no_ln fp32_ln lora_no_ln lora_ln)
 EVEN_LAYERS=(10 20 26 30)
 SEEDS=(42 43 44)
 
-# Build flat list: variants -> layers -> seeds
+# Build flat list: models -> variants -> layers -> seeds
+RUN_MODELS=()
 RUN_VARIANTS=()
 RUN_LAYERS=()
 RUN_SEEDS=()
 
-for v in "${VARIANTS[@]}"; do
-  for l in "${EVEN_LAYERS[@]}"; do
-    for s in "${SEEDS[@]}"; do
-      RUN_VARIANTS+=("$v")
-      RUN_LAYERS+=("$l")
-      RUN_SEEDS+=("$s")
+for m in "${MODELS[@]}"; do
+  for v in "${VARIANTS[@]}"; do
+    for l in "${EVEN_LAYERS[@]}"; do
+      for s in "${SEEDS[@]}"; do
+        RUN_MODELS+=("$m")
+        RUN_VARIANTS+=("$v")
+        RUN_LAYERS+=("$l")
+        RUN_SEEDS+=("$s")
+      done
     done
   done
 done
 
-TOTAL=${#RUN_LAYERS[@]}   # 4 variants * 4 layers * 3 seeds = 48
+TOTAL=${#RUN_LAYERS[@]}   # 2 models * 4 variants * 4 layers * 3 seeds = 96
 TASKS_PER_JOB=4
 START=$((SLURM_ARRAY_TASK_ID * TASKS_PER_JOB))
 
@@ -69,16 +72,17 @@ for local_gpu in 0 1 2 3; do
     break
   fi
 
+  MODEL="${RUN_MODELS[$idx]}"
   VARIANT="${RUN_VARIANTS[$idx]}"
   LAYER="${RUN_LAYERS[$idx]}"
   SEED="${RUN_SEEDS[$idx]}"
 
   # Decode variant flags
-  if [[ "$VARIANT" == *_ln ]]; then
-    NORM="layernorm"
-  else
-    NORM="none"
-  fi
+  # NOTE: use explicit case match — glob *_ln also matches *no_ln
+  case "$VARIANT" in
+    fp32_ln|lora_ln) NORM="layernorm" ;;
+    *)               NORM="none" ;;
+  esac
 
   if [[ "$VARIANT" == lora_* ]]; then
     LORA_LAYERS="all"
@@ -86,9 +90,9 @@ for local_gpu in 0 1 2 3; do
     LORA_LAYERS="none"
   fi
 
-  PROBE_ID="apertus_seed_ablation_${VARIANT}_layer${LAYER}_seed${SEED}"
+  PROBE_ID="${MODEL}_seed_ablation_${VARIANT}_layer${LAYER}_seed${SEED}"
 
-  echo "Run $idx/$TOTAL -> Variant: $VARIANT | Layer: $LAYER | Seed: $SEED | GPU: $local_gpu"
+  echo "Run $idx/$TOTAL -> Model: $MODEL | Variant: $VARIANT | Layer: $LAYER | Seed: $SEED | GPU: $local_gpu"
 
   CUDA_VISIBLE_DEVICES=$local_gpu python probe/train.py \
     model=$MODEL \
