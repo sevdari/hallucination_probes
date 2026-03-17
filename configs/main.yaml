@@ -15,6 +15,7 @@ probe_config:
   normalize_before_head: none
 
 wandb_project: "hallucination-probes"
+wandb_tags: []
 upload_to_hf: true
 save_evaluation_metrics: true
 save_roc_curves: true
@@ -30,5 +31,5 @@ anneal_warmup: 1.0
 enable_gradient_checkpointing: true
 gradient_accumulation_steps: 1
 max_grad_norm: 1.0
-logging_steps: 10
+logging_steps: 50
 seed: 42

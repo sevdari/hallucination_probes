@@ -92,6 +92,7 @@ class TrainingConfig:
     
     wandb_project: str = "hallucination-probes"
     wandb_name: Optional[str] = None
+    wandb_tags: List[str] = field(default_factory=list) 
     
     probe_config: ProbeConfig = field(default_factory=ProbeConfig)
     
