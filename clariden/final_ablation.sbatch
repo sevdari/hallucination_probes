@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=infra01
 #SBATCH -p normal
-#SBATCH --time=3:00:00
+#SBATCH --time=6:00:00
 #SBATCH --job-name=probe-seed-ablation
 #SBATCH --output=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.out
 #SBATCH --error=/iopsstor/scratch/cscs/tkwiecinski/hallucination_probes/log/%x-%j_%a.err
@@ -42,15 +42,17 @@ PROBE_DTYPES=(float32 bfloat16)
 EVEN_LAYERS=(10 20 26 30)
 SEEDS=(42 43 44)
 
-# Build flat list: models -> variants -> dtypes -> layers -> seeds
+# Build flat list: variants -> models -> dtypes -> layers -> seeds
+# Variant outermost ensures all no-LoRA tasks precede all LoRA tasks,
+# giving a clean job-range split when submitting with different time limits.
 RUN_MODELS=()
 RUN_VARIANTS=()
 RUN_DTYPES=()
 RUN_LAYERS=()
 RUN_SEEDS=()
 
-for m in "${MODELS[@]}"; do
-  for v in "${VARIANTS[@]}"; do
+for v in "${VARIANTS[@]}"; do
+  for m in "${MODELS[@]}"; do
     for d in "${PROBE_DTYPES[@]}"; do
       for l in "${EVEN_LAYERS[@]}"; do
         for s in "${SEEDS[@]}"; do
@@ -65,7 +67,10 @@ for m in "${MODELS[@]}"; do
   done
 done
 
-TOTAL=${#RUN_LAYERS[@]}   # 2 * 4 * 2 * 4 * 3 = 192
+TOTAL=${#RUN_LAYERS[@]}   # 4 variants * 2 models * 2 dtypes * 4 layers * 3 seeds = 192
+# Submit in two batches to use different wall-clock limits:
+#   No-LoRA (variants 0-1, jobs 0-23):  sbatch --array=0-23  --time=2:00:00 final_ablation.sbatch
+#   LoRA    (variants 2-3, jobs 24-47): sbatch --array=24-47 --time=6:00:00 final_ablation.sbatch
 TASKS_PER_JOB=4
 START=$((SLURM_ARRAY_TASK_ID * TASKS_PER_JOB))
 
@@ -106,7 +111,7 @@ for local_gpu in 0 1 2 3; do
 
   echo "Run $idx/$TOTAL -> Model: $MODEL | Variant: $VARIANT | dtype: $PROBE_DTYPE | Layer: $LAYER | Seed: $SEED | GPU: $local_gpu"
 
-  CUDA_VISIBLE_DEVICES=$local_gpu python probe/train.py \
+  CUDA_VISIBLE_DEVICES=$local_gpu echo probe/train.py \
     model=$MODEL \
     training=no_lora \
     dataset=our_long_form \
