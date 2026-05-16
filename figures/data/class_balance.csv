@@ -1,0 +1,3 @@
+model,dataset_split,hf_repo,subset,max_length,positive_tokens,negative_tokens,ignored_tokens,total_tokens,labeled_tokens,hallucination_rate,recommended_pos_weight
+apertus,train,tkwiecinski/longfact-test-split,Apertus_8B_Instruct_2509,1536,383343,12501121,14742032,27626496,12884464,0.0298,32.6108
+llama,train,tkwiecinski/longfact-test-split,Meta_Llama_3.1_8B_Instruct,1536,484040,14509964,12591020,27585024,14994004,0.0323,29.9768

@@ -1,0 +1,15 @@
+model,layer,silhouette_pca10,metric,linear_probe_auc_pca20,linear_probe_acc_pca20,kmeans_ari_pca20,kmeans_nmi_pca20,fisher_ratio_hidden,centroid_cosine_dist_hidden
+apertus,30,0.079076,silhouette_pca10,,,,,,
+llama,24,0.054845,silhouette_pca10,,,,,,
+apertus,10,,linear_probe_auc_pca20,0.883875,,,,,
+llama,16,,linear_probe_auc_pca20,0.888672,,,,,
+apertus,16,,linear_probe_acc_pca20,,0.810389,,,,
+llama,16,,linear_probe_acc_pca20,,0.814111,,,,
+apertus,16,,kmeans_ari_pca20,,,0.215933,,,
+llama,10,,kmeans_ari_pca20,,,0.152893,,,
+apertus,16,,kmeans_nmi_pca20,,,,0.164322,,
+llama,10,,kmeans_nmi_pca20,,,,0.114467,,
+apertus,30,,fisher_ratio_hidden,,,,,169.63574,
+llama,26,,fisher_ratio_hidden,,,,,76.684798,
+apertus,16,,centroid_cosine_dist_hidden,,,,,,0.017713
+llama,20,,centroid_cosine_dist_hidden,,,,,,0.058177
